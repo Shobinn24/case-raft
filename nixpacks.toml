@@ -1,0 +1,14 @@
+[phases.setup]
+nixPkgs = ["python311", "nodejs_20", "pango", "pkg-config", "gobject-introspection"]
+
+[phases.install]
+cmds = [
+  "cd frontend && npm install",
+  "cd backend && pip install -r requirements.txt"
+]
+
+[phases.build]
+cmds = ["cd frontend && npm run build"]
+
+[start]
+cmd = "cd backend && flask db upgrade && gunicorn run:app --bind 0.0.0.0:$PORT"

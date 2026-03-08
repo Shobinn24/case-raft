@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+*.db
+instance/
+
+# Node
+node_modules/
+
+# Environment
+.env
+backend/.env
+
+# Generated files
+backend/generated_reports/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

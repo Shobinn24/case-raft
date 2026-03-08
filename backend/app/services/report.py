@@ -1,0 +1,70 @@
+import os
+import uuid
+from abc import ABC, abstractmethod
+from datetime import datetime
+
+from flask import current_app, render_template_string
+from weasyprint import HTML
+
+from app.extensions import db
+from app.models.report_history import ReportHistory
+from app.services.case import Case
+
+
+class Report(ABC):
+    """Abstract base class for all report types."""
+
+    REPORT_TYPE = "base"
+
+    def __init__(self, case_data, user_id):
+        self.case = Case(case_data)
+        self.user_id = user_id
+        self.generated_at = datetime.utcnow().strftime("%B %d, %Y at %I:%M %p")
+
+    @abstractmethod
+    def _get_template(self):
+        """Return the HTML template string for this report type."""
+
+    def _render_html(self):
+        """Render the HTML template with case data."""
+        template = self._get_template()
+        return render_template_string(template, case=self.case, generated_at=self.generated_at)
+
+    def generate(self):
+        """Generate the PDF, save to disk, and record in report history. Returns the ReportHistory record."""
+        html_content = self._render_html()
+
+        # Build output path
+        reports_dir = os.path.join(current_app.root_path, "..", "generated_reports")
+        os.makedirs(reports_dir, exist_ok=True)
+        filename = f"{self.REPORT_TYPE}_{self.case.id}_{uuid.uuid4().hex[:8]}.pdf"
+        file_path = os.path.join(reports_dir, filename)
+
+        # Generate PDF
+        HTML(string=html_content).write_pdf(file_path)
+
+        # Record in history
+        record = ReportHistory(
+            user_id=self.user_id,
+            case_id=self.case.id,
+            case_name=self.case.title,
+            report_type=self.REPORT_TYPE,
+            file_path=filename,
+        )
+        db.session.add(record)
+        db.session.commit()
+
+        return record
+
+
+class CaseSummaryReport(Report):
+    """Generates a Case Summary PDF report."""
+
+    REPORT_TYPE = "case_summary"
+
+    def _get_template(self):
+        template_path = os.path.join(
+            current_app.root_path, "templates", "case_summary.html"
+        )
+        with open(template_path) as f:
+            return f.read()
