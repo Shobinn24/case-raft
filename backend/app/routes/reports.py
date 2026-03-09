@@ -46,6 +46,28 @@ def generate_report():
     if "data" not in case_data:
         return jsonify({"error": "Failed to fetch case data from Clio"}), 502
 
+    # Fetch related contacts (opposing parties, counsel, court contacts)
+    related_contacts = []
+    try:
+        rc_resp = clio.get_related_contacts(case_id)
+        related_contacts = rc_resp.get("data", [])
+    except Exception:
+        pass  # Non-critical — report still works without relationships
+
+    # Fetch billing data (invoices and time entries)
+    bills = []
+    activities = []
+    try:
+        bills_resp = clio.get_bills(case_id)
+        bills = bills_resp.get("data", [])
+    except Exception:
+        pass
+    try:
+        activities_resp = clio.get_activities(case_id)
+        activities = activities_resp.get("data", [])
+    except Exception:
+        pass
+
     # Generate report
     report_classes = {
         "case_summary": CaseSummaryReport,
@@ -54,7 +76,12 @@ def generate_report():
     if not report_cls:
         return jsonify({"error": f"Unknown report type: {report_type}"}), 400
 
-    report = report_cls(case_data["data"], user.id)
+    report = report_cls(
+        case_data["data"], user.id,
+        related_contacts=related_contacts,
+        bills=bills,
+        activities=activities,
+    )
     record = report.generate()
 
     return jsonify({

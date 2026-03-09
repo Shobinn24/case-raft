@@ -16,10 +16,19 @@ class Report(ABC):
 
     REPORT_TYPE = "base"
 
-    def __init__(self, case_data, user_id):
+    def __init__(self, case_data, user_id, related_contacts=None,
+                 bills=None, activities=None):
         self.case = Case(case_data)
         self.user_id = user_id
         self.generated_at = datetime.utcnow().strftime("%B %d, %Y at %I:%M %p")
+
+        # Populate related contacts (opposing parties, counsel, court)
+        if related_contacts:
+            self.case.set_related_contacts(related_contacts)
+
+        # Populate billing data
+        if bills or activities:
+            self.case.set_billing_data(bills or [], activities or [])
 
     @abstractmethod
     def _get_template(self):

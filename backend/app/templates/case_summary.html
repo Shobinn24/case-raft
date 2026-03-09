@@ -46,6 +46,12 @@
     margin-top: 28px;
     margin-bottom: 12px;
   }
+  h3 {
+    font-size: 12pt;
+    color: #34495e;
+    margin-top: 16px;
+    margin-bottom: 8px;
+  }
   table {
     width: 100%;
     border-collapse: collapse;
@@ -61,6 +67,37 @@
     width: 180px;
     color: #555;
   }
+  /* Full-width data tables (billing, activities) */
+  table.data-table {
+    margin-bottom: 16px;
+  }
+  table.data-table th {
+    padding: 8px 10px;
+    text-align: left;
+    background-color: #f5f6fa;
+    border-bottom: 2px solid #ddd;
+    font-weight: bold;
+    color: #555;
+    font-size: 10pt;
+  }
+  table.data-table td {
+    padding: 6px 10px;
+    font-weight: normal;
+    width: auto;
+    border-bottom: 1px solid #eee;
+  }
+  table.data-table td:first-child {
+    font-weight: normal;
+    width: auto;
+    color: #333;
+  }
+  table.data-table td.currency {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  table.data-table td.hours {
+    text-align: right;
+  }
   .status-badge {
     display: inline-block;
     padding: 2px 10px;
@@ -72,6 +109,79 @@
   .status-open { background-color: #27ae60; }
   .status-pending { background-color: #f39c12; }
   .status-closed { background-color: #95a5a6; }
+  .bill-state {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 9pt;
+    font-weight: bold;
+    color: white;
+  }
+  .bill-paid { background-color: #27ae60; }
+  .bill-awaiting_payment { background-color: #f39c12; }
+  .bill-awaiting_approval { background-color: #3498db; }
+  .bill-draft { background-color: #95a5a6; }
+  .bill-void { background-color: #e74c3c; }
+  .bill-deleted { background-color: #e74c3c; }
+  .summary-box {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .summary-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  .summary-item {
+    width: 33%;
+    padding: 8px 0;
+  }
+  .summary-item .label {
+    font-size: 9pt;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .summary-item .value {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-top: 2px;
+  }
+  .contact-card {
+    background-color: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .contact-card .contact-name {
+    font-weight: bold;
+    font-size: 11pt;
+    color: #2c3e50;
+    margin-bottom: 4px;
+  }
+  .contact-card .contact-role {
+    font-size: 9pt;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .contact-card .contact-detail {
+    font-size: 10pt;
+    color: #555;
+    margin: 2px 0;
+  }
+  .empty-note {
+    color: #999;
+    font-style: italic;
+    font-size: 10pt;
+    padding: 8px 0;
+  }
   .footer {
     margin-top: 40px;
     padding-top: 12px;
@@ -90,6 +200,7 @@
   <p class="date">Generated on {{ generated_at }}</p>
 </div>
 
+<!-- ======== CASE INFORMATION ======== -->
 <h2>Case Information</h2>
 <table>
   <tr>
@@ -126,6 +237,7 @@
   </tr>
 </table>
 
+<!-- ======== KEY DATES ======== -->
 <h2>Key Dates</h2>
 <table>
   <tr>
@@ -142,6 +254,7 @@
   </tr>
 </table>
 
+<!-- ======== ATTORNEYS ======== -->
 <h2>Attorneys</h2>
 <table>
   <tr>
@@ -154,6 +267,7 @@
   </tr>
 </table>
 
+<!-- ======== CLIENT INFORMATION ======== -->
 {% if case.client %}
 <h2>Client Information</h2>
 <table>
@@ -177,6 +291,197 @@
     <td>{{ case.client.phone }}</td>
   </tr>
   {% endif %}
+</table>
+{% endif %}
+
+<!-- ======== OPPOSING PARTIES ======== -->
+<h2>Opposing Parties</h2>
+{% if case.opposing_parties %}
+  {% for contact in case.opposing_parties %}
+  <div class="contact-card">
+    <div class="contact-name">{{ contact.display_name }}</div>
+    <div class="contact-role">{{ contact.relationship_description }}</div>
+    {% if contact.company %}
+    <div class="contact-detail">Firm/Company: {{ contact.company }}</div>
+    {% endif %}
+    {% if contact.email %}
+    <div class="contact-detail">Email: {{ contact.email }}</div>
+    {% endif %}
+    {% if contact.phone %}
+    <div class="contact-detail">Phone: {{ contact.phone }}</div>
+    {% endif %}
+    {% if contact.address %}
+    <div class="contact-detail">Address: {{ contact.address }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+  <p class="empty-note">No opposing parties on record for this matter.</p>
+{% endif %}
+
+<!-- ======== OPPOSING COUNSEL ======== -->
+<h2>Opposing Counsel</h2>
+{% if case.opposing_counsel %}
+  {% for contact in case.opposing_counsel %}
+  <div class="contact-card">
+    <div class="contact-name">{{ contact.display_name }}</div>
+    <div class="contact-role">{{ contact.relationship_description }}</div>
+    {% if contact.company %}
+    <div class="contact-detail">Firm: {{ contact.company }}</div>
+    {% endif %}
+    {% if contact.email %}
+    <div class="contact-detail">Email: {{ contact.email }}</div>
+    {% endif %}
+    {% if contact.phone %}
+    <div class="contact-detail">Phone: {{ contact.phone }}</div>
+    {% endif %}
+    {% if contact.address %}
+    <div class="contact-detail">Address: {{ contact.address }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+  <p class="empty-note">No opposing counsel on record for this matter.</p>
+{% endif %}
+
+<!-- ======== COURT CONTACTS ======== -->
+<h2>Court Information</h2>
+{% if case.court_contacts %}
+  {% for contact in case.court_contacts %}
+  <div class="contact-card">
+    <div class="contact-name">{{ contact.display_name }}</div>
+    <div class="contact-role">{{ contact.relationship_description }}</div>
+    {% if contact.company %}
+    <div class="contact-detail">Court/Organization: {{ contact.company }}</div>
+    {% endif %}
+    {% if contact.email %}
+    <div class="contact-detail">Email: {{ contact.email }}</div>
+    {% endif %}
+    {% if contact.phone %}
+    <div class="contact-detail">Phone: {{ contact.phone }}</div>
+    {% endif %}
+    {% if contact.address %}
+    <div class="contact-detail">Address: {{ contact.address }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+  <p class="empty-note">No court contacts (judge, clerk) on record for this matter.</p>
+{% endif %}
+
+<!-- ======== OTHER RELATED CONTACTS ======== -->
+{% if case.other_contacts %}
+<h2>Other Related Contacts</h2>
+  {% for contact in case.other_contacts %}
+  <div class="contact-card">
+    <div class="contact-name">{{ contact.display_name }}</div>
+    <div class="contact-role">{{ contact.relationship_description }}</div>
+    {% if contact.company %}
+    <div class="contact-detail">Company: {{ contact.company }}</div>
+    {% endif %}
+    {% if contact.email %}
+    <div class="contact-detail">Email: {{ contact.email }}</div>
+    {% endif %}
+    {% if contact.phone %}
+    <div class="contact-detail">Phone: {{ contact.phone }}</div>
+    {% endif %}
+    {% if contact.address %}
+    <div class="contact-detail">Address: {{ contact.address }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% endif %}
+
+<!-- ======== BILLING SUMMARY ======== -->
+<h2>Billing Summary</h2>
+<div class="summary-box">
+  <div class="summary-grid">
+    <div class="summary-item">
+      <div class="label">Total Billed</div>
+      <div class="value">{{ case.billing_summary.format_currency(case.billing_summary.total_billed) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Total Paid</div>
+      <div class="value">{{ case.billing_summary.format_currency(case.billing_summary.total_paid) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Outstanding</div>
+      <div class="value">{{ case.billing_summary.format_currency(case.billing_summary.outstanding_balance) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Billable Hours</div>
+      <div class="value">{{ "%.1f"|format(case.billing_summary.billable_hours) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Non-Billable Hours</div>
+      <div class="value">{{ "%.1f"|format(case.billing_summary.non_billable_hours) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Invoices</div>
+      <div class="value">{{ case.billing_summary.invoice_count }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== INVOICES ======== -->
+{% if case.bills %}
+<h3>Invoices</h3>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Invoice #</th>
+      <th>Issued</th>
+      <th>Due</th>
+      <th>Status</th>
+      <th style="text-align:right">Total</th>
+      <th style="text-align:right">Paid</th>
+      <th style="text-align:right">Balance</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for bill in case.bills %}
+    <tr>
+      <td>{{ bill.number or "—" }}</td>
+      <td>{{ bill.issued_at or "—" }}</td>
+      <td>{{ bill.due_at or "—" }}</td>
+      <td>
+        <span class="bill-state bill-{{ bill.state }}">{{ bill.state_display }}</span>
+      </td>
+      <td class="currency">{{ bill.format_currency(bill.total) }}</td>
+      <td class="currency">{{ bill.format_currency(bill.paid) }}</td>
+      <td class="currency">{{ bill.format_currency(bill.balance) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- ======== TIME ENTRIES ======== -->
+{% if case.activities %}
+<h3>Time &amp; Expense Entries</h3>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Type</th>
+      <th>User</th>
+      <th>Description</th>
+      <th style="text-align:right">Hours</th>
+      <th style="text-align:right">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for activity in case.activities %}
+    <tr>
+      <td>{{ activity.date or "—" }}</td>
+      <td>{{ activity.type_display }}</td>
+      <td>{{ activity.user_name or "—" }}</td>
+      <td>{{ activity.note or activity.description_name or "—" }}</td>
+      <td class="hours">{{ "%.1f"|format(activity.hours) if activity.hours else "—" }}</td>
+      <td class="currency">${{ "%.2f"|format(activity.total) if activity.total else "—" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
 </table>
 {% endif %}
 

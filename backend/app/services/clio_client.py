@@ -110,3 +110,54 @@ class ClioAPIClient:
                       "company{name},is_client,created_at,updated_at",
         }
         return self._request("GET", f"contacts/{contact_id}.json", params=params)
+
+    def get_related_contacts(self, matter_id):
+        """GET /matters/{id}/related_contacts.json — all contacts linked to a matter.
+
+        Returns opposing parties, opposing counsel, judges, clerks, etc.
+        Each related contact includes a relationship.description that defines
+        their role on the matter.
+        """
+        params = {
+            "fields": "id,name,first_name,last_name,type,title,prefix,"
+                      "primary_email_address,primary_phone_number,is_matter_client,"
+                      "email_addresses{address,name},"
+                      "phone_numbers{number,name},"
+                      "addresses{street,city,province,postal_code,country,name},"
+                      "company{name},"
+                      "relationship{id,description}",
+            "limit": 200,
+            "order": "id(asc)",
+        }
+        return self._request(
+            "GET", f"matters/{matter_id}/related_contacts.json", params=params
+        )
+
+    def get_activities(self, matter_id):
+        """GET /activities.json — time entries and expenses for a matter."""
+        params = {
+            "fields": "id,type,date,quantity_in_hours,rounded_quantity_in_hours,"
+                      "price,total,note,flat_rate,billed,on_bill,non_billable,"
+                      "non_billable_total,no_charge,"
+                      "user{name},"
+                      "activity_description{name},"
+                      "matter{id}",
+            "matter_id": matter_id,
+            "limit": 200,
+            "order": "date(desc)",
+        }
+        return self._request("GET", "activities.json", params=params)
+
+    def get_bills(self, matter_id):
+        """GET /bills.json — invoices for a matter."""
+        params = {
+            "fields": "id,number,issued_at,due_at,state,total,sub_total,"
+                      "balance,paid,paid_at,due,pending,"
+                      "tax_sum,total_tax,"
+                      "start_at,end_at,subject,type,"
+                      "services_sub_total",
+            "matter_id": matter_id,
+            "limit": 200,
+            "order": "issued_at(desc)",
+        }
+        return self._request("GET", "bills.json", params=params)
