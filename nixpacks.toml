@@ -4,12 +4,13 @@ nixPkgs = ["python311Full", "nodejs_20", "pango", "pkg-config", "gobject-introsp
 [phases.install]
 cmds = [
   "cd frontend && npm install",
-  "python3 -m ensurepip --upgrade",
-  "cd backend && python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt"
+  "python3 -m venv /app/venv",
+  "/app/venv/bin/pip install --upgrade pip",
+  "cd backend && /app/venv/bin/pip install -r requirements.txt"
 ]
 
 [phases.build]
 cmds = ["cd frontend && npm run build"]
 
 [start]
-cmd = "cd backend && flask db upgrade && gunicorn run:app --bind 0.0.0.0:$PORT"
+cmd = "cd backend && /app/venv/bin/flask db upgrade && /app/venv/bin/gunicorn run:app --bind 0.0.0.0:$PORT"
