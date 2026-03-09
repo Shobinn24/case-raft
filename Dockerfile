@@ -37,4 +37,6 @@ WORKDIR /app/backend
 
 ENV FLASK_APP=run.py
 
-CMD ["/bin/sh", "-c", "flask db upgrade && gunicorn run:app --bind 0.0.0.0:$PORT"]
+RUN chmod +x start.sh
+
+CMD ["bash", "start.sh"]
