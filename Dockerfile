@@ -37,6 +37,4 @@ WORKDIR /app/backend
 
 ENV FLASK_APP=run.py
 
-EXPOSE $PORT
-
-CMD flask db upgrade && gunicorn run:app --bind 0.0.0.0:$PORT
+CMD ["/bin/sh", "-c", "flask db upgrade && gunicorn run:app --bind 0.0.0.0:$PORT"]
