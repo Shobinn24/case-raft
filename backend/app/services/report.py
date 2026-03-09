@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 
 from flask import current_app, render_template_string
-from weasyprint import HTML
 
 from app.extensions import db
 from app.models.report_history import ReportHistory
@@ -49,7 +48,8 @@ class Report(ABC):
         filename = f"{self.REPORT_TYPE}_{self.case.id}_{uuid.uuid4().hex[:8]}.pdf"
         file_path = os.path.join(reports_dir, filename)
 
-        # Generate PDF
+        # Generate PDF (lazy import — WeasyPrint loads heavy C libraries)
+        from weasyprint import HTML
         HTML(string=html_content).write_pdf(file_path)
 
         # Record in history
