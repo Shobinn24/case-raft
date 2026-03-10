@@ -5,7 +5,8 @@ from flask import Blueprint, jsonify, request, send_file, session, current_app
 from app.models.report_history import ReportHistory
 from app.models.user import User
 from app.services.clio_client import ClioAPIClient
-from app.services.report import CaseSummaryReport
+from app.services.firm_data import FirmProductivityData
+from app.services.report import CaseSummaryReport, FirmProductivityReport
 
 reports_bp = Blueprint("reports", __name__)
 
@@ -89,6 +90,67 @@ def generate_report():
         "report": {
             "id": record.id,
             "case_id": record.case_id,
+            "case_name": record.case_name,
+            "report_type": record.report_type,
+            "generated_at": record.generated_at.isoformat(),
+        },
+    })
+
+
+@reports_bp.route("/reports/generate-firm", methods=["POST"])
+def generate_firm_report():
+    """Generate a firm-wide PDF report for a given date range."""
+    clio, user = _get_clio_client()
+    if not clio:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
+    report_type = data.get("report_type", "firm_productivity")
+
+    if not start_date or not end_date:
+        return jsonify({"error": "start_date and end_date are required"}), 400
+
+    # Fetch firm-wide data from Clio
+    try:
+        users_resp = clio.get_users()
+        users_data = users_resp.get("data", [])
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch users: {str(e)}"}), 502
+
+    try:
+        activities_data = clio.get_all_activities(start_date, end_date)
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch activities: {str(e)}"}), 502
+
+    try:
+        bills_data = clio.get_all_bills(start_date, end_date)
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch bills: {str(e)}"}), 502
+
+    # Build firm data model and generate report
+    firm_data = FirmProductivityData(
+        start_date, end_date, users_data, activities_data, bills_data
+    )
+
+    firm_report_classes = {
+        "firm_productivity": FirmProductivityReport,
+    }
+    report_cls = firm_report_classes.get(report_type)
+    if not report_cls:
+        return jsonify({"error": f"Unknown report type: {report_type}"}), 400
+
+    report = report_cls(firm_data, user.id)
+    record = report.generate()
+
+    return jsonify({
+        "message": "Report generated successfully",
+        "report": {
+            "id": record.id,
             "case_name": record.case_name,
             "report_type": record.report_type,
             "generated_at": record.generated_at.isoformat(),

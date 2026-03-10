@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: letter;
+    margin: 1in;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9pt;
+      color: #666;
+    }
+  }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 11pt;
+    color: #333;
+    line-height: 1.5;
+  }
+  .header {
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+  }
+  .header h1 {
+    margin: 0 0 4px 0;
+    font-size: 20pt;
+    color: #2c3e50;
+  }
+  .header .subtitle {
+    font-size: 12pt;
+    color: #666;
+    margin: 0;
+  }
+  .header .date {
+    font-size: 9pt;
+    color: #999;
+    margin-top: 8px;
+  }
+  h2 {
+    font-size: 14pt;
+    color: #2c3e50;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+    margin-top: 28px;
+    margin-bottom: 12px;
+  }
+  .summary-box {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .summary-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  .summary-item {
+    width: 33%;
+    padding: 8px 0;
+  }
+  .summary-item .label {
+    font-size: 9pt;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .summary-item .value {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-top: 2px;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+  }
+  table.data-table th {
+    padding: 8px 10px;
+    text-align: left;
+    background-color: #f5f6fa;
+    border-bottom: 2px solid #ddd;
+    font-weight: bold;
+    color: #555;
+    font-size: 10pt;
+  }
+  table.data-table td {
+    padding: 6px 10px;
+    font-weight: normal;
+    width: auto;
+    border-bottom: 1px solid #eee;
+    color: #333;
+  }
+  table.data-table td.currency {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  table.data-table td.hours {
+    text-align: right;
+  }
+  table.data-table th.currency,
+  table.data-table th.hours {
+    text-align: right;
+  }
+  table.data-table tr.totals-row {
+    background-color: #f5f6fa;
+    font-weight: bold;
+  }
+  table.data-table tr.totals-row td {
+    border-top: 2px solid #2c3e50;
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  .bill-state {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 9pt;
+    font-weight: bold;
+    color: white;
+  }
+  .bill-paid { background-color: #27ae60; }
+  .bill-awaiting_payment { background-color: #f39c12; }
+  .bill-awaiting_approval { background-color: #3498db; }
+  .bill-draft { background-color: #95a5a6; }
+  .bill-void { background-color: #e74c3c; }
+  .bill-deleted { background-color: #e74c3c; }
+  .empty-note {
+    font-style: italic;
+    color: #999;
+    margin: 8px 0;
+  }
+  .footer {
+    margin-top: 32px;
+    padding-top: 12px;
+    border-top: 1px solid #ddd;
+    font-size: 9pt;
+    color: #999;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>Firm Productivity Report</h1>
+  <p class="subtitle">{{ data.start_date }} &mdash; {{ data.end_date }}</p>
+  <p class="date">Generated {{ generated_at }}</p>
+</div>
+
+<!-- Productivity Summary -->
+<h2>Productivity Summary</h2>
+<div class="summary-box">
+  <div class="summary-grid">
+    <div class="summary-item">
+      <div class="label">Total Hours</div>
+      <div class="value">{{ "%.1f"|format(data.total_hours) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Billable Hours</div>
+      <div class="value">{{ "%.1f"|format(data.total_billable_hours) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Non-Billable Hours</div>
+      <div class="value">{{ "%.1f"|format(data.total_non_billable_hours) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Total Billed (Time)</div>
+      <div class="value">{{ data.format_currency(data.total_billed_amount) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Total Invoiced</div>
+      <div class="value">{{ data.format_currency(data.total_invoiced) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Outstanding Balance</div>
+      <div class="value">{{ data.format_currency(data.outstanding_balance) }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Employee Productivity Table -->
+<h2>Employee Hours &amp; Billing</h2>
+{% if data.employees %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Employee</th>
+      <th class="currency">Hourly Rate</th>
+      <th class="hours">Total Hours</th>
+      <th class="hours">Billable</th>
+      <th class="hours">Non-Billable</th>
+      <th class="currency">Billed Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for emp in data.employees %}
+    <tr>
+      <td>{{ emp.name }}</td>
+      <td class="currency">{{ emp.format_currency(emp.rate) }}</td>
+      <td class="hours">{{ "%.1f"|format(emp.total_hours) }}</td>
+      <td class="hours">{{ "%.1f"|format(emp.billable_hours) }}</td>
+      <td class="hours">{{ "%.1f"|format(emp.non_billable_hours) }}</td>
+      <td class="currency">{{ emp.format_currency(emp.total_billed_amount) }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="totals-row">
+      <td>Firm Totals</td>
+      <td class="currency"></td>
+      <td class="hours">{{ "%.1f"|format(data.total_hours) }}</td>
+      <td class="hours">{{ "%.1f"|format(data.total_billable_hours) }}</td>
+      <td class="hours">{{ "%.1f"|format(data.total_non_billable_hours) }}</td>
+      <td class="currency">{{ data.format_currency(data.total_billed_amount) }}</td>
+    </tr>
+  </tbody>
+</table>
+{% else %}
+<p class="empty-note">No time entries found for this date range.</p>
+{% endif %}
+
+<!-- Revenue Summary -->
+<h2>Revenue Summary</h2>
+<div class="summary-box">
+  <div class="summary-grid">
+    <div class="summary-item">
+      <div class="label">Total Invoiced</div>
+      <div class="value">{{ data.format_currency(data.total_invoiced) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Total Paid</div>
+      <div class="value">{{ data.format_currency(data.total_paid) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Outstanding Balance</div>
+      <div class="value">{{ data.format_currency(data.outstanding_balance) }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Invoice List -->
+{% if data.bills %}
+<h2>Invoices ({{ data.bills|length }})</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Invoice #</th>
+      <th>Issued</th>
+      <th>Due</th>
+      <th>Status</th>
+      <th class="currency">Total</th>
+      <th class="currency">Paid</th>
+      <th class="currency">Balance</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for bill in data.bills %}
+    <tr>
+      <td>{{ bill.number or "—" }}</td>
+      <td>{{ bill.issued_at or "—" }}</td>
+      <td>{{ bill.due_at or "—" }}</td>
+      <td><span class="bill-state bill-{{ bill.state }}">{{ bill.state_display }}</span></td>
+      <td class="currency">{{ bill.format_currency(bill.total) }}</td>
+      <td class="currency">{{ bill.format_currency(bill.paid) }}</td>
+      <td class="currency">{{ bill.format_currency(bill.balance) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- Footer -->
+<div class="footer">
+  Generated by Case Raft &mdash; {{ generated_at }}
+</div>
+
+</body>
+</html>

@@ -77,3 +77,66 @@ class CaseSummaryReport(Report):
         )
         with open(template_path) as f:
             return f.read()
+
+
+# ------------------------------------------------------------------
+# Firm-wide reports (not tied to a specific case)
+# ------------------------------------------------------------------
+
+class FirmReport(ABC):
+    """Abstract base class for firm-wide reports."""
+
+    REPORT_TYPE = "firm_base"
+
+    def __init__(self, firm_data, user_id):
+        self.firm_data = firm_data
+        self.user_id = user_id
+        self.generated_at = datetime.utcnow().strftime("%B %d, %Y at %I:%M %p")
+
+    @abstractmethod
+    def _get_template(self):
+        """Return the HTML template string for this report type."""
+
+    def _render_html(self):
+        """Render the HTML template with firm data."""
+        template = self._get_template()
+        return render_template_string(
+            template, data=self.firm_data, generated_at=self.generated_at
+        )
+
+    def generate(self):
+        """Generate the PDF, save to disk, and record in report history."""
+        html_content = self._render_html()
+
+        reports_dir = os.path.join(current_app.root_path, "..", "generated_reports")
+        os.makedirs(reports_dir, exist_ok=True)
+        filename = f"{self.REPORT_TYPE}_{uuid.uuid4().hex[:8]}.pdf"
+        file_path = os.path.join(reports_dir, filename)
+
+        from weasyprint import HTML
+        HTML(string=html_content).write_pdf(file_path)
+
+        record = ReportHistory(
+            user_id=self.user_id,
+            case_id=None,
+            case_name=self.firm_data.title,
+            report_type=self.REPORT_TYPE,
+            file_path=filename,
+        )
+        db.session.add(record)
+        db.session.commit()
+
+        return record
+
+
+class FirmProductivityReport(FirmReport):
+    """Generates a Firm Productivity PDF report."""
+
+    REPORT_TYPE = "firm_productivity"
+
+    def _get_template(self):
+        template_path = os.path.join(
+            current_app.root_path, "templates", "firm_productivity.html"
+        )
+        with open(template_path) as f:
+            return f.read()

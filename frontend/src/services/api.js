@@ -19,9 +19,18 @@ export const getCases = (status) =>
   api.get("/api/cases", { params: { status } });
 export const getCase = (caseId) => api.get(`/api/cases/${caseId}`);
 
-// Reports
+// Reports — Case-specific
 export const generateReport = (caseId, reportType = "case_summary") =>
   api.post("/api/reports/generate", { case_id: caseId, report_type: reportType });
+
+// Reports — Firm-wide
+export const generateFirmReport = (startDate, endDate, reportType = "firm_productivity") =>
+  api.post("/api/reports/generate-firm", {
+    start_date: startDate,
+    end_date: endDate,
+    report_type: reportType,
+  });
+
 export const getReportHistory = () => api.get("/api/reports/history");
 export const getReportDownloadUrl = (reportId) =>
   `${API_BASE}/api/reports/${reportId}/download`;

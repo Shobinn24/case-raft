@@ -22,7 +22,7 @@ export default function History() {
         <table className="history-table">
           <thead>
             <tr>
-              <th>Case</th>
+              <th>Report Subject</th>
               <th>Report Type</th>
               <th>Generated</th>
               <th>Action</th>
@@ -32,7 +32,7 @@ export default function History() {
             {reports.map((r) => (
               <tr key={r.id}>
                 <td>{r.case_name}</td>
-                <td>{r.report_type.replace("_", " ")}</td>
+                <td>{r.report_type.replaceAll("_", " ")}</td>
                 <td>{new Date(r.generated_at).toLocaleDateString()}</td>
                 <td>
                   <a

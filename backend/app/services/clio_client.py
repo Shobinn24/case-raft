@@ -1,3 +1,4 @@
+import urllib.parse
 from datetime import datetime, timedelta
 
 import requests
@@ -161,3 +162,74 @@ class ClioAPIClient:
             "order": "issued_at(desc)",
         }
         return self._request("GET", "bills.json", params=params)
+
+    # ------------------------------------------------------------------
+    # Firm-wide methods (no matter_id — used for productivity reports)
+    # ------------------------------------------------------------------
+
+    def _request_all_pages(self, method, endpoint, params=None):
+        """Fetch all pages of a paginated Clio API response."""
+        params = dict(params or {})
+        all_data = []
+        while True:
+            resp = self._request(method, endpoint, params)
+            all_data.extend(resp.get("data", []))
+            paging = resp.get("meta", {}).get("paging", {})
+            next_url = paging.get("next")
+            if not next_url:
+                break
+            parsed = urllib.parse.urlparse(next_url)
+            query_params = urllib.parse.parse_qs(parsed.query)
+            page_token = query_params.get("page_token", [None])[0]
+            if not page_token:
+                break
+            params["page_token"] = page_token
+        return all_data
+
+    def get_users(self):
+        """GET /users.json — list all firm employees."""
+        params = {
+            "fields": "id,name,first_name,last_name,email,rate,"
+                      "subscription_type,enabled",
+            "enabled": "true",
+            "limit": 200,
+            "order": "name(asc)",
+        }
+        return self._request("GET", "users.json", params=params)
+
+    def get_all_activities(self, start_date, end_date):
+        """GET /activities.json — all time entries firm-wide for a date range.
+
+        start_date/end_date should be ISO date strings like '2026-01-01'.
+        """
+        params = {
+            "fields": "id,type,date,quantity_in_hours,rounded_quantity_in_hours,"
+                      "price,total,note,non_billable,non_billable_total,"
+                      "billed,on_bill,"
+                      "user{id,name},"
+                      "activity_description{name},"
+                      "matter{id,display_number}",
+            "type": "TimeEntry",
+            "start_date": start_date,
+            "end_date": end_date,
+            "limit": 200,
+            "order": "date(desc)",
+        }
+        return self._request_all_pages("GET", "activities.json", params=params)
+
+    def get_all_bills(self, issued_after, issued_before):
+        """GET /bills.json — all invoices firm-wide for a date range.
+
+        issued_after/issued_before should be ISO date strings.
+        """
+        params = {
+            "fields": "id,number,issued_at,due_at,state,total,sub_total,"
+                      "balance,paid,paid_at,due,pending,"
+                      "start_at,end_at,subject,type,"
+                      "matter{id,display_number}",
+            "issued_after": issued_after,
+            "issued_before": issued_before,
+            "limit": 200,
+            "order": "issued_at(desc)",
+        }
+        return self._request_all_pages("GET", "bills.json", params=params)

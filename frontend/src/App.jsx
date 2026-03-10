@@ -4,6 +4,7 @@ import { getAuthStatus, logout } from "./services/api";
 import Login from "./pages/Login";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
+import FirmProductivity from "./pages/FirmProductivity";
 import History from "./pages/History";
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
         <div className="nav-brand">Case Raft</div>
         <div className="nav-links">
           <NavLink to="/cases">Cases</NavLink>
+          <NavLink to="/firm-reports">Firm Reports</NavLink>
           <NavLink to="/history">History</NavLink>
         </div>
         <div className="nav-user">
@@ -47,6 +49,7 @@ function App() {
         <Routes>
           <Route path="/cases" element={<Cases />} />
           <Route path="/cases/:caseId" element={<CaseDetail />} />
+          <Route path="/firm-reports" element={<FirmProductivity />} />
           <Route path="/history" element={<History />} />
           <Route path="*" element={<Navigate to="/cases" replace />} />
         </Routes>

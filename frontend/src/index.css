@@ -288,3 +288,33 @@ a { text-decoration: none; color: inherit; }
 }
 .history-table tr:last-child td { border-bottom: none; }
 .history-table td:last-child { text-align: right; }
+
+/* Date range form (firm reports) */
+.date-range-form {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.date-range-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #666;
+}
+.date-range-form input[type="date"] {
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #333;
+  background: white;
+  transition: border-color 0.2s;
+}
+.date-range-form input[type="date"]:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
