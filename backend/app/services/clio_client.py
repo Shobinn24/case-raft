@@ -1,3 +1,4 @@
+import time
 import urllib.parse
 from datetime import datetime, timedelta
 
@@ -17,9 +18,12 @@ class ClioAPIClient:
         self.user_id = user_id
         self.base_url = current_app.config["CLIO_API_URL"]
 
+    # Refresh 5 minutes early to avoid mid-request expiry during PDF generation
+    TOKEN_REFRESH_BUFFER = timedelta(minutes=5)
+
     def _ensure_valid_token(self):
-        """Refresh the access token if it has expired."""
-        if self.token_expires_at and datetime.utcnow() >= self.token_expires_at:
+        """Refresh the access token if it has expired or is about to expire."""
+        if self.token_expires_at and datetime.utcnow() >= (self.token_expires_at - self.TOKEN_REFRESH_BUFFER):
             self._refresh_token()
 
     def _refresh_token(self):
@@ -52,21 +56,29 @@ class ClioAPIClient:
                 self.refresh_token = data["refresh_token"]
             db.session.commit()
 
+    MAX_RETRIES = 2
+    RETRY_DELAY = 2  # seconds
+
     def _request(self, method, endpoint, params=None):
-        """Make an authenticated request to the Clio Manage API."""
+        """Make an authenticated request to the Clio Manage API.
+
+        Automatically retries once on 429 (rate limit) responses.
+        """
         self._ensure_valid_token()
         url = f"{self.base_url}/{endpoint}"
-        resp = requests.request(
-            method,
-            url,
-            params=params,
-            headers={
-                "Authorization": f"Bearer {self.access_token}",
-                "Content-Type": "application/json",
-            },
-        )
-        resp.raise_for_status()
-        return resp.json()
+        headers = {
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/json",
+        }
+
+        for attempt in range(self.MAX_RETRIES):
+            resp = requests.request(method, url, params=params, headers=headers)
+            if resp.status_code == 429 and attempt < self.MAX_RETRIES - 1:
+                retry_after = int(resp.headers.get("Retry-After", self.RETRY_DELAY))
+                time.sleep(retry_after)
+                continue
+            resp.raise_for_status()
+            return resp.json()
 
     def get_current_user(self):
         """GET /users/who_am_i.json — returns the authenticated user's info."""
