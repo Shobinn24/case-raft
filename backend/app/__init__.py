@@ -29,6 +29,7 @@ def create_app():
     CORS(app, supports_credentials=True, origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://caseraft.com",
         "https://web-production-f49df.up.railway.app",
     ])
 

@@ -6,8 +6,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///caseraft.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Session cookie settings — "None" + Secure allows cross-site OAuth redirects via ngrok
-    SESSION_COOKIE_SAMESITE = "None"
+    # Session cookie settings
+    SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = True
 
     # Clio OAuth
