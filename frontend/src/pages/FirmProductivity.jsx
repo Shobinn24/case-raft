@@ -39,7 +39,7 @@ export default function FirmProductivity() {
   return (
     <div>
       <h2>Firm Productivity Report</h2>
-      <p style={{ color: "#666", marginBottom: 24 }}>
+      <p className="page-subtitle">
         Generate a report showing hours billed by each employee and
         corresponding revenue for a selected date range.
       </p>
@@ -66,7 +66,7 @@ export default function FirmProductivity() {
         </div>
       </div>
 
-      <div className="report-actions" style={{ marginTop: 24 }}>
+      <div className="report-actions mt-24">
         {error && <p className="error">{error}</p>}
         <button
           className="btn btn-primary"

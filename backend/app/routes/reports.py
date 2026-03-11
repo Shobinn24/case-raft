@@ -97,6 +97,74 @@ def generate_report():
     })
 
 
+@reports_bp.route("/reports/generate-batch", methods=["POST"])
+def generate_batch_reports():
+    """Generate PDF reports for multiple cases at once."""
+    clio, user = _get_clio_client()
+    if not clio:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    data = request.get_json()
+    case_ids = data.get("case_ids", []) if data else []
+    if not case_ids:
+        return jsonify({"error": "case_ids array is required"}), 400
+    if len(case_ids) > 20:
+        return jsonify({"error": "Maximum 20 cases per batch"}), 400
+
+    reports = []
+    errors = []
+
+    for case_id in case_ids:
+        try:
+            case_data = clio.get_matter(case_id)
+            if "data" not in case_data:
+                errors.append({"case_id": case_id, "error": "Failed to fetch"})
+                continue
+
+            related_contacts = []
+            try:
+                rc_resp = clio.get_related_contacts(case_id)
+                related_contacts = rc_resp.get("data", [])
+            except Exception:
+                pass
+
+            bills = []
+            activities = []
+            try:
+                bills_resp = clio.get_bills(case_id)
+                bills = bills_resp.get("data", [])
+            except Exception:
+                pass
+            try:
+                activities_resp = clio.get_activities(case_id)
+                activities = activities_resp.get("data", [])
+            except Exception:
+                pass
+
+            report = CaseSummaryReport(
+                case_data["data"], user.id,
+                related_contacts=related_contacts,
+                bills=bills,
+                activities=activities,
+            )
+            record = report.generate()
+            reports.append({
+                "id": record.id,
+                "case_id": record.case_id,
+                "case_name": record.case_name,
+                "report_type": record.report_type,
+                "generated_at": record.generated_at.isoformat(),
+            })
+        except Exception as e:
+            errors.append({"case_id": case_id, "error": str(e)})
+
+    return jsonify({
+        "message": f"{len(reports)} report(s) generated",
+        "reports": reports,
+        "errors": errors,
+    })
+
+
 @reports_bp.route("/reports/generate-firm", methods=["POST"])
 def generate_firm_report():
     """Generate a firm-wide PDF report for a given date range."""

@@ -31,6 +31,10 @@ export const generateFirmReport = (startDate, endDate, reportType = "firm_produc
     report_type: reportType,
   });
 
+// Reports — Batch
+export const generateBatchReports = (caseIds) =>
+  api.post("/api/reports/generate-batch", { case_ids: caseIds });
+
 export const getReportHistory = () => api.get("/api/reports/history");
 export const getReportDownloadUrl = (reportId) =>
   `${API_BASE}/api/reports/${reportId}/download`;

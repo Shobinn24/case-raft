@@ -6,6 +6,7 @@ import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import FirmProductivity from "./pages/FirmProductivity";
 import History from "./pages/History";
+import logo from "./assets/caseraftlogo.jpg";
 
 function App() {
   const [auth, setAuth] = useState({ checked: false, user: null });
@@ -32,7 +33,9 @@ function App() {
   return (
     <div className="app">
       <nav className="navbar">
-        <div className="nav-brand">Case Raft</div>
+        <div className="nav-brand">
+          <img src={logo} alt="Case Raft" className="nav-logo" />
+        </div>
         <div className="nav-links">
           <NavLink to="/cases">Cases</NavLink>
           <NavLink to="/firm-reports">Firm Reports</NavLink>
@@ -40,7 +43,7 @@ function App() {
         </div>
         <div className="nav-user">
           <span>{auth.user.email}</span>
-          <button onClick={handleLogout} className="btn btn-small btn-outline">
+          <button onClick={handleLogout} className="btn btn-small btn-outline-nav">
             Logout
           </button>
         </div>
