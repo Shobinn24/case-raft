@@ -2,10 +2,16 @@
 
 A web application for solo law firm attorneys that connects to **Clio Manage** via OAuth, pulls case and client data, and generates downloadable PDF reports.
 
+🌐 **Live at [caseraft.com](https://caseraft.com)**
+
+![Case Raft Landing Page](screenshot.jpg)
+
 ## Features
 
 - **Clio Manage Integration** — OAuth 2.0 authentication with automatic token refresh
 - **Case Management** — Browse open, pending, and closed matters pulled live from Clio
+- **Search & Filter** — Find cases by number, description, or client name with status tabs
+- **Batch Report Generation** — Select multiple cases and generate reports in bulk (up to 20)
 - **Comprehensive PDF Reports** — Generate case summary PDFs that include:
   - Matter details (status, dates, billing method, practice area, attorneys)
   - Client information (name, type, contact details)
@@ -25,6 +31,7 @@ A web application for solo law firm attorneys that connects to **Clio Manage** v
 | PDF Engine   | WeasyPrint (HTML/CSS to PDF)                |
 | Auth         | OAuth 2.0 with Clio Manage API v4           |
 | Deployment   | Docker, Gunicorn, Railway                   |
+| Domain       | caseraft.com (Vercel DNS → Railway)         |
 
 ## Project Structure
 
@@ -56,8 +63,8 @@ case-raft/
 │   ├── src/
 │   │   ├── App.jsx              # Router and layout
 │   │   ├── pages/
-│   │   │   ├── Login.jsx        # OAuth login page
-│   │   │   ├── Cases.jsx        # Matter list with filters
+│   │   │   ├── Login.jsx        # Landing page with OAuth login
+│   │   │   ├── Cases.jsx        # Matter list with search, filters, batch select
 │   │   │   ├── CaseDetail.jsx   # Full case view + report generation
 │   │   │   └── History.jsx      # Report history and downloads
 │   │   └── services/
@@ -92,6 +99,7 @@ case-raft/
 | Method | Path                            | Description                        |
 |--------|---------------------------------|------------------------------------|
 | POST   | `/api/reports/generate`         | Generate a PDF report for a case   |
+| POST   | `/api/reports/generate-batch`   | Generate reports for multiple cases (max 20) |
 | GET    | `/api/reports/history`          | List all generated reports         |
 | GET    | `/api/reports/:id/download`     | Download a generated PDF           |
 
@@ -103,7 +111,8 @@ The app connects to **Clio Manage** (not Clio Grow/Platform) using the v4 API at
 - **Related Contacts** — opposing parties, opposing counsel, judges, clerks (categorized by relationship description)
 - **Bills** — invoices with status, amounts, dates
 - **Activities** — time entries and expenses with hours, rates, billing status
-- **Token Refresh** — automatically refreshes expired OAuth tokens
+- **Token Refresh** — automatically refreshes expired OAuth tokens with 5-minute buffer
+- **Rate Limiting** — automatic retry with Retry-After header support
 
 ## Local Development
 
@@ -145,16 +154,6 @@ npm run dev
 
 The Vite dev server runs on `http://localhost:5173` and proxies `/auth` and `/api` requests to the Flask backend on port 5000.
 
-### Using ngrok for OAuth
-
-Clio OAuth requires HTTPS redirect URIs. For local development:
-
-```bash
-ngrok http 5000
-```
-
-Update the redirect URI in your Clio developer portal and `.env` to match the ngrok URL.
-
 ## Production Deployment (Railway)
 
 The app deploys to Railway using a multi-stage Dockerfile:
@@ -170,7 +169,7 @@ The app deploys to Railway using a multi-stage Dockerfile:
 | `SECRET_KEY`         | Flask session signing key                  |
 | `CLIO_CLIENT_ID`     | Clio developer app client ID               |
 | `CLIO_CLIENT_SECRET` | Clio developer app client secret           |
-| `CLIO_REDIRECT_URI`  | Production OAuth callback URL              |
+| `CLIO_REDIRECT_URI`  | `https://caseraft.com/auth/callback`       |
 
 ### Deploy
 
