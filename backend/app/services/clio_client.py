@@ -220,7 +220,8 @@ class ClioAPIClient:
                       "billed,on_bill,"
                       "user{id,name},"
                       "activity_description{name},"
-                      "matter{id,display_number}",
+                      "matter{id,display_number},"
+                      "bill{id}",
             "type": "TimeEntry",
             "start_date": start_date,
             "end_date": end_date,

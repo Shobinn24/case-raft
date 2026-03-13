@@ -14,6 +14,7 @@ class EmployeeProductivity:
         self.billable_hours = 0.0
         self.non_billable_hours = 0.0
         self.total_billed_amount = 0.0
+        self.collected_revenue = 0.0
 
     def format_currency(self, amount):
         if amount is None:
@@ -35,6 +36,12 @@ class FirmProductivityData:
                 "name": u.get("name", ""),
                 "rate": u.get("rate"),
             }
+
+        # Build set of paid bill IDs for collected-revenue calculation
+        paid_bill_ids = set()
+        for b in bills_data:
+            if b.get("state") == "paid":
+                paid_bill_ids.add(b.get("id"))
 
         # Aggregate activities by user
         employees = {}
@@ -63,6 +70,12 @@ class FirmProductivityData:
                 emp.billable_hours += hours
                 emp.total_billed_amount += activity.get("total") or 0
 
+            # Collected revenue: activity total when its bill has been paid
+            bill_info = activity.get("bill") or {}
+            bill_id = bill_info.get("id")
+            if bill_id and bill_id in paid_bill_ids:
+                emp.collected_revenue += activity.get("total") or 0
+
         self.employees = sorted(employees.values(), key=lambda e: e.name)
 
         # Firm totals
@@ -70,6 +83,7 @@ class FirmProductivityData:
         self.total_billable_hours = sum(e.billable_hours for e in self.employees)
         self.total_non_billable_hours = sum(e.non_billable_hours for e in self.employees)
         self.total_billed_amount = sum(e.total_billed_amount for e in self.employees)
+        self.total_collected_revenue = sum(e.collected_revenue for e in self.employees)
 
         # Invoice / revenue data (reuse existing Bill class)
         self.bills = [Bill(b) for b in bills_data]

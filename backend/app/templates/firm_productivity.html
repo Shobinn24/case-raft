@@ -59,7 +59,7 @@
     gap: 0;
   }
   .summary-item {
-    width: 33%;
+    width: 25%;
     padding: 8px 0;
   }
   .summary-item .label {
@@ -174,6 +174,10 @@
       <div class="value">{{ data.format_currency(data.total_billed_amount) }}</div>
     </div>
     <div class="summary-item">
+      <div class="label">Collected Revenue</div>
+      <div class="value">{{ data.format_currency(data.total_collected_revenue) }}</div>
+    </div>
+    <div class="summary-item">
       <div class="label">Total Invoiced</div>
       <div class="value">{{ data.format_currency(data.total_invoiced) }}</div>
     </div>
@@ -196,6 +200,7 @@
       <th class="hours">Billable</th>
       <th class="hours">Non-Billable</th>
       <th class="currency">Billed Amount</th>
+      <th class="currency">Collected Revenue</th>
     </tr>
   </thead>
   <tbody>
@@ -207,6 +212,7 @@
       <td class="hours">{{ "%.1f"|format(emp.billable_hours) }}</td>
       <td class="hours">{{ "%.1f"|format(emp.non_billable_hours) }}</td>
       <td class="currency">{{ emp.format_currency(emp.total_billed_amount) }}</td>
+      <td class="currency">{{ emp.format_currency(emp.collected_revenue) }}</td>
     </tr>
     {% endfor %}
     <tr class="totals-row">
@@ -216,6 +222,7 @@
       <td class="hours">{{ "%.1f"|format(data.total_billable_hours) }}</td>
       <td class="hours">{{ "%.1f"|format(data.total_non_billable_hours) }}</td>
       <td class="currency">{{ data.format_currency(data.total_billed_amount) }}</td>
+      <td class="currency">{{ data.format_currency(data.total_collected_revenue) }}</td>
     </tr>
   </tbody>
 </table>
