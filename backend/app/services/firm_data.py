@@ -1,6 +1,21 @@
 """Data models for firm-wide reports (not tied to individual cases)."""
 
+from datetime import date as date_type, timedelta
+
 from app.services.case import Bill
+
+
+def _working_days(start_str, end_str):
+    """Count weekdays (Mon-Fri) between two ISO date strings, inclusive."""
+    start = date_type.fromisoformat(start_str)
+    end = date_type.fromisoformat(end_str)
+    count = 0
+    current = start
+    while current <= end:
+        if current.weekday() < 5:
+            count += 1
+        current += timedelta(days=1)
+    return count
 
 
 class EmployeeProductivity:
@@ -15,11 +30,43 @@ class EmployeeProductivity:
         self.non_billable_hours = 0.0
         self.total_billed_amount = 0.0
         self.collected_revenue = 0.0
+        self.write_off_hours = 0.0
+        self.write_off_amount = 0.0
+        self.target_hours = None  # Set externally based on date range
+
+    @property
+    def realization_rate(self):
+        """Total Billed Amount / (Billable Hours x Hourly Rate)."""
+        if not self.rate or self.billable_hours == 0:
+            return None
+        potential = self.billable_hours * self.rate
+        if potential == 0:
+            return None
+        return self.total_billed_amount / potential
+
+    @property
+    def collection_rate(self):
+        """Collected Revenue / Total Billed Amount."""
+        if self.total_billed_amount == 0:
+            return None
+        return self.collected_revenue / self.total_billed_amount
+
+    @property
+    def utilization_rate(self):
+        """Billable Hours / Target Hours."""
+        if not self.target_hours or self.target_hours == 0:
+            return None
+        return self.billable_hours / self.target_hours
 
     def format_currency(self, amount):
         if amount is None:
             return "\u2014"
         return f"${amount:,.2f}"
+
+    def format_percent(self, value):
+        if value is None:
+            return "\u2014"
+        return f"{value * 100:.1f}%"
 
 
 class FirmProductivityData:
@@ -76,7 +123,19 @@ class FirmProductivityData:
             if bill_id and bill_id in paid_bill_ids:
                 emp.collected_revenue += activity.get("total") or 0
 
+            # Write-off tracking: no_charge activities
+            if activity.get("no_charge"):
+                emp.write_off_hours += hours
+                emp.write_off_amount += hours * (emp.rate or 0)
+
         self.employees = sorted(employees.values(), key=lambda e: e.name)
+
+        # Target hours & utilization
+        working_days = _working_days(start_date, end_date)
+        default_target = working_days * 8.0
+        self.target_hours = default_target
+        for emp in self.employees:
+            emp.target_hours = default_target
 
         # Firm totals
         self.total_hours = sum(e.total_hours for e in self.employees)
@@ -84,12 +143,60 @@ class FirmProductivityData:
         self.total_non_billable_hours = sum(e.non_billable_hours for e in self.employees)
         self.total_billed_amount = sum(e.total_billed_amount for e in self.employees)
         self.total_collected_revenue = sum(e.collected_revenue for e in self.employees)
+        self.total_write_off_hours = sum(e.write_off_hours for e in self.employees)
+        self.total_write_off_amount = sum(e.write_off_amount for e in self.employees)
+
+        # Firm-wide rates
+        total_potential = sum(
+            (e.billable_hours * e.rate) for e in self.employees if e.rate
+        )
+        self.firm_realization_rate = (
+            self.total_billed_amount / total_potential if total_potential > 0 else None
+        )
+        self.firm_collection_rate = (
+            self.total_collected_revenue / self.total_billed_amount
+            if self.total_billed_amount > 0 else None
+        )
+        self.firm_utilization_rate = (
+            self.total_billable_hours / (default_target * len(self.employees))
+            if self.employees and default_target > 0 else None
+        )
 
         # Invoice / revenue data (reuse existing Bill class)
         self.bills = [Bill(b) for b in bills_data]
         self.total_invoiced = sum(b.total or 0 for b in self.bills)
         self.total_paid = sum(b.paid or 0 for b in self.bills)
         self.outstanding_balance = sum(b.balance or 0 for b in self.bills)
+
+        # Invoice aging buckets
+        reference_date = date_type.fromisoformat(end_date)
+        self.aging_buckets = {
+            "current": {"label": "Current (0-30 days)", "total": 0.0, "count": 0},
+            "31_60":   {"label": "31-60 Days",          "total": 0.0, "count": 0},
+            "61_90":   {"label": "61-90 Days",          "total": 0.0, "count": 0},
+            "over_90": {"label": "90+ Days",            "total": 0.0, "count": 0},
+        }
+        for bill in self.bills:
+            if bill.state == "paid" or not bill.balance or bill.balance <= 0:
+                continue
+            if not bill.issued_at:
+                continue
+            issued = date_type.fromisoformat(bill.issued_at[:10])
+            age_days = (reference_date - issued).days
+            if age_days <= 30:
+                bucket = "current"
+            elif age_days <= 60:
+                bucket = "31_60"
+            elif age_days <= 90:
+                bucket = "61_90"
+            else:
+                bucket = "over_90"
+            self.aging_buckets[bucket]["total"] += bill.balance
+            self.aging_buckets[bucket]["count"] += 1
+
+        self.total_outstanding_aging = sum(
+            b["total"] for b in self.aging_buckets.values()
+        )
 
     @property
     def title(self):
@@ -99,3 +206,8 @@ class FirmProductivityData:
         if amount is None:
             return "\u2014"
         return f"${amount:,.2f}"
+
+    def format_percent(self, value):
+        if value is None:
+            return "\u2014"
+        return f"{value * 100:.1f}%"

@@ -787,6 +787,34 @@ a { text-decoration: none; color: inherit; }
   box-shadow: 0 0 0 3px rgba(0, 95, 184, 0.1);
 }
 
+/* Section Picker */
+.section-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+.section-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.section-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* Button Group */
+.btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 /* Utilities */
 .page-subtitle {
   color: var(--color-text-muted);

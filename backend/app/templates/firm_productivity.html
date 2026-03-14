@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <style>
   @page {
-    size: letter;
-    margin: 1in;
+    size: letter landscape;
+    margin: 0.75in;
     @bottom-center {
       content: "Page " counter(page) " of " counter(pages);
       font-size: 9pt;
@@ -14,7 +14,7 @@
   }
   body {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 11pt;
+    font-size: 10pt;
     color: #333;
     line-height: 1.5;
   }
@@ -59,17 +59,17 @@
     gap: 0;
   }
   .summary-item {
-    width: 25%;
+    width: 20%;
     padding: 8px 0;
   }
   .summary-item .label {
-    font-size: 9pt;
+    font-size: 8pt;
     color: #888;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
   .summary-item .value {
-    font-size: 14pt;
+    font-size: 13pt;
     font-weight: bold;
     color: #2c3e50;
     margin-top: 2px;
@@ -78,22 +78,25 @@
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 16px;
+    font-size: 9pt;
   }
   table.data-table th {
-    padding: 8px 10px;
+    padding: 6px 8px;
     text-align: left;
     background-color: #f5f6fa;
     border-bottom: 2px solid #ddd;
     font-weight: bold;
     color: #555;
-    font-size: 10pt;
+    font-size: 8pt;
+    white-space: nowrap;
   }
   table.data-table td {
-    padding: 6px 10px;
+    padding: 5px 8px;
     font-weight: normal;
     width: auto;
     border-bottom: 1px solid #eee;
     color: #333;
+    white-space: nowrap;
   }
   table.data-table td.currency {
     text-align: right;
@@ -154,6 +157,7 @@
 </div>
 
 <!-- Productivity Summary -->
+{% if show.get('summary', true) %}
 <h2>Productivity Summary</h2>
 <div class="summary-box">
   <div class="summary-grid">
@@ -185,22 +189,61 @@
       <div class="label">Outstanding Balance</div>
       <div class="value">{{ data.format_currency(data.outstanding_balance) }}</div>
     </div>
+    {% if show.get('utilization', true) %}
+    <div class="summary-item">
+      <div class="label">Utilization Rate</div>
+      <div class="value">{{ data.format_percent(data.firm_utilization_rate) }}</div>
+    </div>
+    {% endif %}
+    {% if show.get('realization', true) %}
+    <div class="summary-item">
+      <div class="label">Realization Rate</div>
+      <div class="value">{{ data.format_percent(data.firm_realization_rate) }}</div>
+    </div>
+    {% endif %}
+    {% if show.get('collection', true) %}
+    <div class="summary-item">
+      <div class="label">Collection Rate</div>
+      <div class="value">{{ data.format_percent(data.firm_collection_rate) }}</div>
+    </div>
+    {% endif %}
+    {% if show.get('writeOffs', true) %}
+    <div class="summary-item">
+      <div class="label">Write-Offs</div>
+      <div class="value">{{ data.format_currency(data.total_write_off_amount) }}</div>
+    </div>
+    {% endif %}
   </div>
 </div>
+{% endif %}
 
 <!-- Employee Productivity Table -->
+{% if show.get('employeeTable', true) %}
 <h2>Employee Hours &amp; Billing</h2>
 {% if data.employees %}
 <table class="data-table">
   <thead>
     <tr>
       <th>Employee</th>
-      <th class="currency">Hourly Rate</th>
-      <th class="hours">Total Hours</th>
+      <th class="currency">Rate</th>
+      <th class="hours">Total Hrs</th>
       <th class="hours">Billable</th>
-      <th class="hours">Non-Billable</th>
-      <th class="currency">Billed Amount</th>
-      <th class="currency">Collected Revenue</th>
+      <th class="hours">Non-Bill</th>
+      <th class="currency">Billed Amt</th>
+      <th class="currency">Collected</th>
+      {% if show.get('utilization', true) %}
+      <th class="hours">Util %</th>
+      {% endif %}
+      {% if show.get('realization', true) %}
+      <th class="hours">Real %</th>
+      {% endif %}
+      {% if show.get('collection', true) %}
+      <th class="hours">Coll %</th>
+      {% endif %}
+      {% if show.get('writeOffs', true) %}
+      <th class="hours">WO Hrs</th>
+      <th class="currency">WO Amt</th>
+      {% endif %}
     </tr>
   </thead>
   <tbody>
@@ -213,6 +256,19 @@
       <td class="hours">{{ "%.1f"|format(emp.non_billable_hours) }}</td>
       <td class="currency">{{ emp.format_currency(emp.total_billed_amount) }}</td>
       <td class="currency">{{ emp.format_currency(emp.collected_revenue) }}</td>
+      {% if show.get('utilization', true) %}
+      <td class="hours">{{ emp.format_percent(emp.utilization_rate) }}</td>
+      {% endif %}
+      {% if show.get('realization', true) %}
+      <td class="hours">{{ emp.format_percent(emp.realization_rate) }}</td>
+      {% endif %}
+      {% if show.get('collection', true) %}
+      <td class="hours">{{ emp.format_percent(emp.collection_rate) }}</td>
+      {% endif %}
+      {% if show.get('writeOffs', true) %}
+      <td class="hours">{{ "%.1f"|format(emp.write_off_hours) }}</td>
+      <td class="currency">{{ emp.format_currency(emp.write_off_amount) }}</td>
+      {% endif %}
     </tr>
     {% endfor %}
     <tr class="totals-row">
@@ -223,14 +279,44 @@
       <td class="hours">{{ "%.1f"|format(data.total_non_billable_hours) }}</td>
       <td class="currency">{{ data.format_currency(data.total_billed_amount) }}</td>
       <td class="currency">{{ data.format_currency(data.total_collected_revenue) }}</td>
+      {% if show.get('utilization', true) %}
+      <td class="hours">{{ data.format_percent(data.firm_utilization_rate) }}</td>
+      {% endif %}
+      {% if show.get('realization', true) %}
+      <td class="hours">{{ data.format_percent(data.firm_realization_rate) }}</td>
+      {% endif %}
+      {% if show.get('collection', true) %}
+      <td class="hours">{{ data.format_percent(data.firm_collection_rate) }}</td>
+      {% endif %}
+      {% if show.get('writeOffs', true) %}
+      <td class="hours">{{ "%.1f"|format(data.total_write_off_hours) }}</td>
+      <td class="currency">{{ data.format_currency(data.total_write_off_amount) }}</td>
+      {% endif %}
     </tr>
   </tbody>
 </table>
 {% else %}
 <p class="empty-note">No time entries found for this date range.</p>
 {% endif %}
+{% endif %}
+
+<!-- Accounts Receivable Aging -->
+{% if show.get('aging', true) %}
+<h2>Accounts Receivable Aging</h2>
+<div class="summary-box">
+  <div class="summary-grid">
+    {% for key, bucket in data.aging_buckets.items() %}
+    <div class="summary-item">
+      <div class="label">{{ bucket.label }} ({{ bucket.count }})</div>
+      <div class="value">{{ data.format_currency(bucket.total) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <!-- Revenue Summary -->
+{% if show.get('revenueSummary', true) %}
 <h2>Revenue Summary</h2>
 <div class="summary-box">
   <div class="summary-grid">
@@ -248,9 +334,10 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <!-- Invoice List -->
-{% if data.bills %}
+{% if show.get('invoiceList', true) and data.bills %}
 <h2>Invoices ({{ data.bills|length }})</h2>
 <table class="data-table">
   <thead>
@@ -267,9 +354,9 @@
   <tbody>
     {% for bill in data.bills %}
     <tr>
-      <td>{{ bill.number or "—" }}</td>
-      <td>{{ bill.issued_at or "—" }}</td>
-      <td>{{ bill.due_at or "—" }}</td>
+      <td>{{ bill.number or "\u2014" }}</td>
+      <td>{{ bill.issued_at or "\u2014" }}</td>
+      <td>{{ bill.due_at or "\u2014" }}</td>
       <td><span class="bill-state bill-{{ bill.state }}">{{ bill.state_display }}</span></td>
       <td class="currency">{{ bill.format_currency(bill.total) }}</td>
       <td class="currency">{{ bill.format_currency(bill.paid) }}</td>

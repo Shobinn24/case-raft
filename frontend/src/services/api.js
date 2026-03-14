@@ -24,12 +24,21 @@ export const generateReport = (caseId, reportType = "case_summary") =>
   api.post("/api/reports/generate", { case_id: caseId, report_type: reportType });
 
 // Reports — Firm-wide
-export const generateFirmReport = (startDate, endDate, reportType = "firm_productivity") =>
+export const generateFirmReport = (startDate, endDate, reportType = "firm_productivity", options = {}) =>
   api.post("/api/reports/generate-firm", {
     start_date: startDate,
     end_date: endDate,
     report_type: reportType,
+    options,
   });
+
+// Accounting Export (CSV)
+export const exportAccounting = (startDate, endDate, format = "quickbooks") =>
+  api.post("/api/reports/export-accounting", {
+    start_date: startDate,
+    end_date: endDate,
+    format,
+  }, { responseType: "blob" });
 
 // Reports — Batch
 export const generateBatchReports = (caseIds) =>

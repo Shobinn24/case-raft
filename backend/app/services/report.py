@@ -88,9 +88,10 @@ class FirmReport(ABC):
 
     REPORT_TYPE = "firm_base"
 
-    def __init__(self, firm_data, user_id):
+    def __init__(self, firm_data, user_id, options=None):
         self.firm_data = firm_data
         self.user_id = user_id
+        self.options = options or {}
         self.generated_at = datetime.utcnow().strftime("%B %d, %Y at %I:%M %p")
 
     @abstractmethod
@@ -100,8 +101,10 @@ class FirmReport(ABC):
     def _render_html(self):
         """Render the HTML template with firm data."""
         template = self._get_template()
+        sections = self.options.get("sections", {})
         return render_template_string(
-            template, data=self.firm_data, generated_at=self.generated_at
+            template, data=self.firm_data, generated_at=self.generated_at,
+            show=sections,
         )
 
     def generate(self):

@@ -1,6 +1,8 @@
+import csv
+import io
 import os
 
-from flask import Blueprint, jsonify, request, send_file, session, current_app
+from flask import Blueprint, Response, jsonify, request, send_file, session, current_app
 
 from app.models.report_history import ReportHistory
 from app.models.user import User
@@ -212,7 +214,8 @@ def generate_firm_report():
     if not report_cls:
         return jsonify({"error": f"Unknown report type: {report_type}"}), 400
 
-    report = report_cls(firm_data, user.id)
+    options = data.get("options", {})
+    report = report_cls(firm_data, user.id, options=options)
     record = report.generate()
 
     return jsonify({
@@ -276,4 +279,87 @@ def download_report(report_id):
         mimetype="application/pdf",
         as_attachment=True,
         download_name=f"{record.case_name}_{record.report_type}.pdf",
+    )
+
+
+@reports_bp.route("/reports/export-accounting", methods=["POST"])
+def export_accounting():
+    """Export firm billing data as CSV for QuickBooks or Xero import."""
+    clio, user = _get_clio_client()
+    if not clio:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
+    export_format = data.get("format", "quickbooks")
+
+    if not start_date or not end_date:
+        return jsonify({"error": "start_date and end_date are required"}), 400
+
+    try:
+        bills_data = clio.get_all_bills(start_date, end_date)
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch bills: {str(e)}"}), 502
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    if export_format == "xero":
+        writer.writerow([
+            "*ContactName", "*InvoiceNumber", "*InvoiceDate", "*DueDate",
+            "Total", "AmountPaid", "Status", "Description",
+        ])
+        for bill in bills_data:
+            writer.writerow([
+                bill.get("subject", ""),
+                bill.get("number", ""),
+                (bill.get("issued_at") or "")[:10],
+                (bill.get("due_at") or "")[:10],
+                f"{bill.get('total', 0):.2f}",
+                f"{bill.get('paid', 0):.2f}",
+                bill.get("state", ""),
+                f"Invoice #{bill.get('number', '')}",
+            ])
+    else:  # quickbooks
+        writer.writerow([
+            "Date", "Transaction Type", "Name", "Account",
+            "Debit", "Credit", "Memo", "Invoice #",
+        ])
+        for bill in bills_data:
+            writer.writerow([
+                (bill.get("issued_at") or "")[:10],
+                "Invoice",
+                bill.get("subject", ""),
+                "Accounts Receivable",
+                f"{bill.get('total', 0):.2f}",
+                "",
+                f"Invoice #{bill.get('number', '')}",
+                bill.get("number", ""),
+            ])
+        # Payment rows for paid bills
+        for bill in bills_data:
+            if bill.get("state") == "paid" and bill.get("paid_at"):
+                writer.writerow([
+                    bill["paid_at"][:10],
+                    "Payment",
+                    bill.get("subject", ""),
+                    "Accounts Receivable",
+                    "",
+                    f"{bill.get('paid', 0):.2f}",
+                    f"Payment for Invoice #{bill.get('number', '')}",
+                    bill.get("number", ""),
+                ])
+
+    csv_content = output.getvalue()
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition":
+                f"attachment; filename=accounting_export_{start_date}_{end_date}.csv"
+        },
     )

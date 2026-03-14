@@ -217,7 +217,7 @@ class ClioAPIClient:
         params = {
             "fields": "id,type,date,quantity_in_hours,rounded_quantity_in_hours,"
                       "price,total,note,non_billable,non_billable_total,"
-                      "billed,on_bill,"
+                      "no_charge,billed,on_bill,"
                       "user{id,name},"
                       "activity_description{name},"
                       "matter{id,display_number},"
