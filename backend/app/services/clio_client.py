@@ -239,7 +239,9 @@ class ClioAPIClient:
             "fields": "id,number,issued_at,due_at,state,total,sub_total,"
                       "balance,paid,paid_at,due,pending,"
                       "start_at,end_at,subject,type,"
-                      "matters{id,display_number}",
+                      "matters{id,display_number},"
+                      "line_items{id,type,total,quantity,price,"
+                      "activity{id,user{id,name}}}",
             "issued_after": issued_after,
             "issued_before": issued_before,
             "limit": 200,

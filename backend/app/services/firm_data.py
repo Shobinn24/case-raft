@@ -84,12 +84,6 @@ class FirmProductivityData:
                 "rate": u.get("rate"),
             }
 
-        # Build set of paid bill IDs for collected-revenue calculation
-        paid_bill_ids = set()
-        for b in bills_data:
-            if b.get("state") == "paid":
-                paid_bill_ids.add(b.get("id"))
-
         # Aggregate activities by user
         employees = {}
         for activity in activities_data:
@@ -117,16 +111,55 @@ class FirmProductivityData:
                 emp.billable_hours += hours
                 emp.total_billed_amount += activity.get("total") or 0
 
-            # Collected revenue: activity total when its bill has been paid
-            bill_info = activity.get("bill") or {}
-            bill_id = bill_info.get("id")
-            if bill_id and bill_id in paid_bill_ids:
-                emp.collected_revenue += activity.get("total") or 0
-
             # Write-off tracking: no_charge activities
             if activity.get("no_charge"):
                 emp.write_off_hours += hours
                 emp.write_off_amount += hours * (emp.rate or 0)
+
+        # Collected revenue: calculated from paid bills' line items.
+        # For each paid bill, look at its line items to find which users
+        # contributed work, then attribute the bill's paid amount
+        # proportionally based on each user's share of line item totals.
+        for b in bills_data:
+            if b.get("state") != "paid":
+                continue
+            bill_paid = b.get("paid") or 0
+            if bill_paid <= 0:
+                continue
+
+            # Sum line item totals per user on this bill
+            user_totals = {}  # uid -> sum of line item totals
+            line_items = b.get("line_items") or []
+            bill_line_total = 0.0
+            for li in line_items:
+                li_total = li.get("total") or 0
+                activity = li.get("activity") or {}
+                user = activity.get("user") or {}
+                uid = user.get("id")
+                if uid:
+                    user_totals[uid] = user_totals.get(uid, 0) + li_total
+                    bill_line_total += li_total
+
+            if bill_line_total <= 0:
+                continue
+
+            # Distribute the bill's paid amount proportionally by user share
+            for uid, user_li_total in user_totals.items():
+                share = user_li_total / bill_line_total
+                collected = bill_paid * share
+                if uid in employees:
+                    employees[uid].collected_revenue += collected
+                else:
+                    # User might not have activities in the date range but
+                    # has collected revenue from a bill issued in the range
+                    u_data = users_by_id.get(uid, {})
+                    emp = EmployeeProductivity(
+                        uid,
+                        user.get("name", u_data.get("name", "Unknown")),
+                        rate=u_data.get("rate"),
+                    )
+                    emp.collected_revenue += collected
+                    employees[uid] = emp
 
         self.employees = sorted(employees.values(), key=lambda e: e.name)
 
