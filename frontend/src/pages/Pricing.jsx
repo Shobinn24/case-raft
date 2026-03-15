@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getBillingPrices, createCheckout } from "../services/api";
 
 const TIER_ICONS = {
@@ -114,6 +115,10 @@ export default function Pricing({ user }) {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="pricing-compare-link">
+        <Link to="/compare">Compare all features &rarr;</Link>
       </div>
 
       <div className="pricing-trust">

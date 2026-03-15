@@ -8,6 +8,7 @@ import FirmProductivity from "./pages/FirmProductivity";
 import History from "./pages/History";
 import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
+import ComparePlans from "./pages/ComparePlans";
 import logo from "./assets/caseraftlogo.jpg";
 
 function App() {
@@ -71,6 +72,7 @@ function App() {
           {needsSubscription ? (
             <>
               <Route path="/pricing" element={<Pricing user={auth.user} />} />
+              <Route path="/compare" element={<ComparePlans user={auth.user} />} />
               <Route path="/billing" element={<Billing user={auth.user} onRefreshAuth={refreshAuth} />} />
               <Route path="*" element={<Navigate to="/pricing" replace />} />
             </>
@@ -81,6 +83,7 @@ function App() {
               <Route path="/firm-reports" element={<FirmProductivity />} />
               <Route path="/history" element={<History />} />
               <Route path="/pricing" element={<Pricing user={auth.user} />} />
+              <Route path="/compare" element={<ComparePlans user={auth.user} />} />
               <Route path="/billing" element={<Billing user={auth.user} onRefreshAuth={refreshAuth} />} />
               <Route path="*" element={<Navigate to="/cases" replace />} />
             </>
