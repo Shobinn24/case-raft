@@ -54,9 +54,13 @@ export default function Login() {
           <div className="landing-nav-brand">
             <img src={logo} alt="Case Raft" className="landing-logo" />
           </div>
-          <a href={getLoginUrl()} className="btn btn-accent btn-small">
-            Sign In
-          </a>
+          <div className="landing-nav-links">
+            <a href="#pricing" className="landing-nav-link">Pricing</a>
+            <a href="#compare" className="landing-nav-link">Compare Plans</a>
+            <a href={getLoginUrl()} className="btn btn-accent btn-small">
+              Sign In
+            </a>
+          </div>
         </div>
       </nav>
 
@@ -70,10 +74,10 @@ export default function Login() {
             Clio Manage account to generate comprehensive, professional PDF
             reports instantly.
           </p>
-          <a href={getLoginUrl()} className="btn btn-accent btn-large">
-            Connect Clio Manage
+          <a href="#pricing" className="btn btn-accent btn-large">
+            View Plans &amp; Pricing
           </a>
-          <p className="hero-note">OAuth 2.0 — we never see your password</p>
+          <p className="hero-note">Powered by Clio Manage · OAuth 2.0 secure</p>
         </div>
       </section>
 
@@ -84,20 +88,20 @@ export default function Login() {
           <div className="steps-row">
             <div className="step">
               <div className="step-number">1</div>
+              <h3>Choose a Plan</h3>
+              <p>Pick the plan that fits your firm. Solo, Team, or Firm — all with 50% off your first month.</p>
+            </div>
+            <div className="step-arrow">&#8594;</div>
+            <div className="step">
+              <div className="step-number">2</div>
               <h3>Connect Clio</h3>
               <p>Authorize with one click. Case Raft reads your matters, contacts, and billing data securely.</p>
             </div>
             <div className="step-arrow">&#8594;</div>
             <div className="step">
-              <div className="step-number">2</div>
-              <h3>Select &amp; Generate</h3>
-              <p>Browse your cases, pick the ones you need, and hit Generate. Reports build in seconds.</p>
-            </div>
-            <div className="step-arrow">&#8594;</div>
-            <div className="step">
               <div className="step-number">3</div>
-              <h3>Download PDF</h3>
-              <p>Get a professionally formatted PDF with matter details, billing summaries, and contacts.</p>
+              <h3>Generate Reports</h3>
+              <p>Browse your cases, hit Generate, and download professionally formatted PDFs in seconds.</p>
             </div>
           </div>
         </div>
@@ -203,6 +207,108 @@ export default function Login() {
         </div>
       </section>
 
+      {/* ── Pricing ── */}
+      <section className="landing-pricing" id="pricing">
+        <div className="section-inner">
+          <div className="landing-pricing-badge">🎉 50% off your first month</div>
+          <h2>Simple, Transparent Pricing</h2>
+          <p className="landing-pricing-sub">
+            Professional Clio reporting tools for every firm size. No contracts. Cancel anytime.
+          </p>
+          <div className="landing-pricing-grid">
+            <div className="landing-price-card">
+              <h3>Solo</h3>
+              <div className="landing-price-amount"><span className="landing-price-dollar">$</span>29<span className="landing-price-period">/mo</span></div>
+              <p className="landing-price-desc">For solo practitioners</p>
+              <ul>
+                <li>Case summary reports</li>
+                <li>PDF export &amp; download</li>
+                <li>Report history</li>
+                <li>Basic firm reports</li>
+                <li>1 user</li>
+              </ul>
+              <a href={getLoginUrl()} className="btn btn-primary btn-large">Get Started</a>
+            </div>
+            <div className="landing-price-card landing-price-card-featured">
+              <div className="landing-price-popular">Most Popular</div>
+              <h3>Team</h3>
+              <div className="landing-price-amount"><span className="landing-price-dollar">$</span>79<span className="landing-price-period">/mo</span></div>
+              <p className="landing-price-desc">For small to mid-size firms</p>
+              <ul>
+                <li>Everything in Solo</li>
+                <li>Full firm productivity reports</li>
+                <li>Batch report generation</li>
+                <li>Revenue &amp; utilization analytics</li>
+                <li>CSV export (QuickBooks / Xero)</li>
+                <li>Up to 5 users</li>
+              </ul>
+              <a href={getLoginUrl()} className="btn btn-accent btn-large">Get Started</a>
+            </div>
+            <div className="landing-price-card">
+              <h3>Firm</h3>
+              <div className="landing-price-amount"><span className="landing-price-dollar">$</span>149<span className="landing-price-period">/mo</span></div>
+              <p className="landing-price-desc">For larger practices</p>
+              <ul>
+                <li>Everything in Team</li>
+                <li>Unlimited batch reports</li>
+                <li>Custom report sections</li>
+                <li>AR aging analysis</li>
+                <li>Priority support</li>
+                <li>Unlimited users</li>
+              </ul>
+              <a href={getLoginUrl()} className="btn btn-primary btn-large">Get Started</a>
+            </div>
+          </div>
+          <p className="landing-pricing-compare"><a href="#compare">Compare all features &rarr;</a></p>
+        </div>
+      </section>
+
+      {/* ── Compare Plans ── */}
+      <section className="landing-compare" id="compare">
+        <div className="section-inner">
+          <h2>Compare Plans</h2>
+          <p className="landing-compare-sub">
+            A detailed breakdown of every feature across all plans.
+          </p>
+          <div className="landing-compare-table-wrapper">
+            <table className="landing-compare-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Solo <span>$29/mo</span></th>
+                  <th className="landing-compare-featured">Team <span>$79/mo</span></th>
+                  <th>Firm <span>$149/mo</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="landing-compare-category"><td colSpan={4}>Reporting</td></tr>
+                <tr><td>Case summary reports</td><td>✓</td><td className="landing-compare-featured">✓</td><td>✓</td></tr>
+                <tr><td>PDF export &amp; download</td><td>✓</td><td className="landing-compare-featured">✓</td><td>✓</td></tr>
+                <tr><td>Report download history</td><td>✓</td><td className="landing-compare-featured">✓</td><td>✓</td></tr>
+                <tr><td>Firm productivity reports</td><td>Basic</td><td className="landing-compare-featured">Full</td><td>Full</td></tr>
+                <tr><td>Batch report generation</td><td>—</td><td className="landing-compare-featured">Up to 20</td><td>Unlimited</td></tr>
+                <tr><td>Custom report sections</td><td>—</td><td className="landing-compare-featured">—</td><td>✓</td></tr>
+
+                <tr className="landing-compare-category"><td colSpan={4}>Analytics</td></tr>
+                <tr><td>Collected revenue reports</td><td>—</td><td className="landing-compare-featured">✓</td><td>✓</td></tr>
+                <tr><td>Realization &amp; utilization rates</td><td>—</td><td className="landing-compare-featured">✓</td><td>✓</td></tr>
+                <tr><td>Write-off tracking</td><td>—</td><td className="landing-compare-featured">✓</td><td>✓</td></tr>
+                <tr><td>AR aging analysis</td><td>—</td><td className="landing-compare-featured">—</td><td>✓</td></tr>
+
+                <tr className="landing-compare-category"><td colSpan={4}>Export &amp; Integration</td></tr>
+                <tr><td>Clio Manage integration</td><td>✓</td><td className="landing-compare-featured">✓</td><td>✓</td></tr>
+                <tr><td>CSV export (QuickBooks / Xero)</td><td>—</td><td className="landing-compare-featured">✓</td><td>✓</td></tr>
+
+                <tr className="landing-compare-category"><td colSpan={4}>Users &amp; Support</td></tr>
+                <tr><td>Users included</td><td>1</td><td className="landing-compare-featured">Up to 5</td><td>Unlimited</td></tr>
+                <tr><td>Email support</td><td>✓</td><td className="landing-compare-featured">✓</td><td>✓</td></tr>
+                <tr><td>Priority support</td><td>—</td><td className="landing-compare-featured">—</td><td>✓</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       {/* ── Contact ── */}
       <section className="landing-contact">
         <div className="section-inner">
@@ -218,9 +324,9 @@ export default function Login() {
       <section className="cta">
         <div className="section-inner">
           <h2>Ready to streamline your case reporting?</h2>
-          <p>Connect your Clio Manage account and generate your first report in under a minute.</p>
-          <a href={getLoginUrl()} className="btn btn-accent btn-large">
-            Get Started with Clio
+          <p>Choose a plan, connect your Clio Manage account, and generate your first report in under a minute.</p>
+          <a href="#pricing" className="btn btn-accent btn-large">
+            Get Started
           </a>
         </div>
       </section>

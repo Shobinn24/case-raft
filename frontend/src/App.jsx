@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate, NavLink } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, NavLink, Link } from "react-router-dom";
 import { getAuthStatus, logout } from "./services/api";
 import Login from "./pages/Login";
 import Cases from "./pages/Cases";
@@ -44,9 +44,9 @@ function App() {
   return (
     <div className="app">
       <nav className="navbar">
-        <div className="nav-brand">
+        <Link to="/cases" className="nav-brand">
           <img src={logo} alt="Case Raft" className="nav-logo" />
-        </div>
+        </Link>
         <div className="nav-links">
           {!needsSubscription && (
             <>
