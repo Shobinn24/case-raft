@@ -38,11 +38,13 @@ def create_app():
     from app.routes.cases import cases_bp
     from app.routes.reports import reports_bp
     from app.routes.billing import billing_bp
+    from app.routes.contact import contact_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(cases_bp, url_prefix="/api")
     app.register_blueprint(reports_bp, url_prefix="/api")
     app.register_blueprint(billing_bp, url_prefix="/billing")
+    app.register_blueprint(contact_bp, url_prefix="/api")
 
     # Serve React frontend in production
     if os.path.isdir(FRONTEND_DIR):

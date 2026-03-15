@@ -1,5 +1,49 @@
-import { getLoginUrl } from "../services/api";
+import { useState } from "react";
+import { getLoginUrl, submitContact } from "../services/api";
 import logo from "../assets/caseraftlogo.jpg";
+
+function LandingContactForm() {
+  const [form, setForm] = useState({ name: "", email: "", firm_name: "", message: "" });
+  const [status, setStatus] = useState(null);
+
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus("sending");
+    try {
+      await submitContact(form);
+      setStatus("success");
+      setForm({ name: "", email: "", firm_name: "", message: "" });
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  if (status === "success") {
+    return (
+      <div className="landing-contact-success">
+        <h3>Message Sent!</h3>
+        <p>We'll get back to you within 24 hours.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="landing-contact-form">
+      <div className="landing-contact-row">
+        <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Your name *" required />
+        <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="Email address *" required />
+      </div>
+      <input type="text" name="firm_name" value={form.firm_name} onChange={handleChange} placeholder="Firm name (optional)" />
+      <textarea name="message" rows={4} value={form.message} onChange={handleChange} placeholder="How can we help? *" required />
+      {status === "error" && <p className="landing-contact-error">Something went wrong. Please try again.</p>}
+      <button type="submit" className="btn btn-accent btn-large" disabled={status === "sending"}>
+        {status === "sending" ? "Sending..." : "Send Message"}
+      </button>
+    </form>
+  );
+}
 
 export default function Login() {
   return (
@@ -156,6 +200,17 @@ export default function Login() {
               <span>Case and client data is fetched fresh for each report. Nothing is cached or stored on our servers.</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── Contact ── */}
+      <section className="landing-contact">
+        <div className="section-inner">
+          <h2>Questions? Let's Talk.</h2>
+          <p className="landing-contact-sub">
+            Whether you're evaluating CaseRaft for your firm or need help getting started, drop us a line.
+          </p>
+          <LandingContactForm />
         </div>
       </section>
 

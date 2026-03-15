@@ -9,6 +9,7 @@ import History from "./pages/History";
 import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
 import ComparePlans from "./pages/ComparePlans";
+import Contact from "./pages/Contact";
 import logo from "./assets/caseraftlogo.jpg";
 
 function App() {
@@ -55,6 +56,7 @@ function App() {
             </>
           )}
           <NavLink to="/pricing">Pricing</NavLink>
+          <NavLink to="/contact">Contact</NavLink>
           {auth.user.is_paid && <NavLink to="/billing">Billing</NavLink>}
         </div>
         <div className="nav-user">
@@ -73,6 +75,7 @@ function App() {
             <>
               <Route path="/pricing" element={<Pricing user={auth.user} />} />
               <Route path="/compare" element={<ComparePlans user={auth.user} />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/billing" element={<Billing user={auth.user} onRefreshAuth={refreshAuth} />} />
               <Route path="*" element={<Navigate to="/pricing" replace />} />
             </>
@@ -84,6 +87,7 @@ function App() {
               <Route path="/history" element={<History />} />
               <Route path="/pricing" element={<Pricing user={auth.user} />} />
               <Route path="/compare" element={<ComparePlans user={auth.user} />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/billing" element={<Billing user={auth.user} onRefreshAuth={refreshAuth} />} />
               <Route path="*" element={<Navigate to="/cases" replace />} />
             </>

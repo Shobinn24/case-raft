@@ -53,3 +53,6 @@ export const getBillingPrices = () => api.get("/billing/prices");
 export const getSubscription = () => api.get("/billing/subscription");
 export const createCheckout = (tier) => api.post("/billing/checkout", { tier });
 export const createPortal = () => api.post("/billing/portal");
+
+// Contact
+export const submitContact = (data) => api.post("/api/contact", data);
