@@ -123,7 +123,7 @@ def status():
         "user": {
             "id": user.id,
             "email": user.email,
-            "plan_tier": user.plan_tier,
+            "plan_tier": user.effective_plan_tier,
             "subscription_status": user.subscription_status,
             "is_paid": user.is_paid,
         },

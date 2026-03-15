@@ -22,9 +22,31 @@ class User(db.Model):
 
     reports = db.relationship("ReportHistory", backref="user", lazy=True)
 
+    # Whitelisted domains/emails get free Firm access (no Stripe required)
+    WHITELISTED_DOMAINS = {"trustice.us"}
+    WHITELISTED_EMAILS = {"srhoades@trustice.us"}
+
+    @property
+    def is_whitelisted(self):
+        if not self.email:
+            return False
+        email_lower = self.email.lower()
+        if email_lower in self.WHITELISTED_EMAILS:
+            return True
+        domain = email_lower.split("@")[-1]
+        return domain in self.WHITELISTED_DOMAINS
+
     @property
     def is_paid(self):
+        if self.is_whitelisted:
+            return True
         return self.subscription_status == "active" and self.plan_tier != "free"
+
+    @property
+    def effective_plan_tier(self):
+        if self.is_whitelisted:
+            return "firm"
+        return self.plan_tier
 
     def __repr__(self):
         return f"<User {self.email}>"
