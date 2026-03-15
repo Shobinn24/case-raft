@@ -120,7 +120,13 @@ def status():
 
     return jsonify({
         "authenticated": True,
-        "user": {"id": user.id, "email": user.email},
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "plan_tier": user.plan_tier,
+            "subscription_status": user.subscription_status,
+            "is_paid": user.is_paid,
+        },
     })
 
 

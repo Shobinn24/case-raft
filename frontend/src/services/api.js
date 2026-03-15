@@ -47,3 +47,9 @@ export const generateBatchReports = (caseIds) =>
 export const getReportHistory = () => api.get("/api/reports/history");
 export const getReportDownloadUrl = (reportId) =>
   `${API_BASE}/api/reports/${reportId}/download`;
+
+// Billing
+export const getBillingPrices = () => api.get("/billing/prices");
+export const getSubscription = () => api.get("/billing/subscription");
+export const createCheckout = (tier) => api.post("/billing/checkout", { tier });
+export const createPortal = () => api.post("/billing/portal");

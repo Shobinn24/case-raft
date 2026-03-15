@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       '/auth': 'http://localhost:5000',
       '/api': 'http://localhost:5000',
+      '/billing': 'http://localhost:5000',
     },
   },
 })

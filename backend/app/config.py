@@ -19,3 +19,12 @@ class Config:
     CLIO_API_URL = "https://app.clio.com/api/v4"
     CLIO_AUTH_URL = "https://app.clio.com/oauth/authorize"
     CLIO_TOKEN_URL = "https://app.clio.com/oauth/token"
+
+    # Stripe
+    STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+    STRIPE_PUBLIC_KEY = os.environ.get("STRIPE_PUBLIC_KEY")
+    STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
+    STRIPE_PRICE_SOLO = os.environ.get("STRIPE_PRICE_SOLO")
+    STRIPE_PRICE_TEAM = os.environ.get("STRIPE_PRICE_TEAM")
+    STRIPE_PRICE_FIRM = os.environ.get("STRIPE_PRICE_FIRM")
+    STRIPE_COUPON_ID = os.environ.get("STRIPE_COUPON_ID")

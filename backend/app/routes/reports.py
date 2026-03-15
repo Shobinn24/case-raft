@@ -12,6 +12,16 @@ from app.services.report import CaseSummaryReport, FirmProductivityReport
 
 reports_bp = Blueprint("reports", __name__)
 
+def _require_subscription(user):
+    """Ensure the user has an active paid subscription."""
+    if not user.is_paid:
+        return jsonify({
+            "error": "Subscription required",
+            "message": "An active subscription is required to use this feature. Please choose a plan.",
+            "upgrade": True,
+        }), 403
+    return None
+
 
 def _get_clio_client():
     """Build a ClioAPIClient from the current session user."""
@@ -36,6 +46,11 @@ def generate_report():
     clio, user = _get_clio_client()
     if not clio:
         return jsonify({"error": "Not authenticated"}), 401
+
+    # Subscription check
+    sub_error = _require_subscription(user)
+    if sub_error:
+        return sub_error
 
     data = request.get_json()
     if not data or "case_id" not in data:
@@ -106,6 +121,10 @@ def generate_batch_reports():
     if not clio:
         return jsonify({"error": "Not authenticated"}), 401
 
+    sub_error = _require_subscription(user)
+    if sub_error:
+        return sub_error
+
     data = request.get_json()
     case_ids = data.get("case_ids", []) if data else []
     if not case_ids:
@@ -173,6 +192,13 @@ def generate_firm_report():
     clio, user = _get_clio_client()
     if not clio:
         return jsonify({"error": "Not authenticated"}), 401
+
+    if not user.is_paid:
+        return jsonify({
+            "error": "Upgrade required",
+            "message": "Firm productivity reports require a paid plan.",
+            "upgrade": True,
+        }), 403
 
     data = request.get_json()
     if not data:
@@ -288,6 +314,13 @@ def export_accounting():
     clio, user = _get_clio_client()
     if not clio:
         return jsonify({"error": "Not authenticated"}), 401
+
+    if not user.is_paid:
+        return jsonify({
+            "error": "Upgrade required",
+            "message": "CSV export requires a paid plan.",
+            "upgrade": True,
+        }), 403
 
     data = request.get_json()
     if not data:
