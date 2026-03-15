@@ -828,27 +828,29 @@ a { text-decoration: none; color: inherit; }
 
 .pricing-page {
   margin-top: -24px;
-}
-
-/* ── Hero Section ── */
-.pricing-hero {
   background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
-  padding: 72px 24px 100px;
-  text-align: center;
+  min-height: 100vh;
   position: relative;
   overflow: hidden;
 }
 
-.pricing-hero::before {
+.pricing-page::before {
   content: "";
   position: absolute;
   top: -50%;
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle at 30% 50%, rgba(0, 95, 184, 0.15) 0%, transparent 50%),
-              radial-gradient(circle at 70% 50%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+  background: radial-gradient(circle at 30% 30%, rgba(0, 95, 184, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 70% 60%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
   pointer-events: none;
+}
+
+/* ── Hero Section ── */
+.pricing-hero {
+  padding: 72px 24px 48px;
+  text-align: center;
+  position: relative;
 }
 
 .pricing-hero-inner {
@@ -887,7 +889,7 @@ a { text-decoration: none; color: inherit; }
 /* ── Cards Wrapper ── */
 .pricing-cards-wrapper {
   max-width: var(--max-width);
-  margin: -60px auto 0;
+  margin: 0 auto;
   padding: 0 24px;
   position: relative;
   z-index: 2;
@@ -1083,6 +1085,8 @@ a { text-decoration: none; color: inherit; }
   max-width: var(--max-width);
   margin: 48px auto 0;
   padding: 0 24px 48px;
+  position: relative;
+  z-index: 2;
 }
 
 .pricing-trust-inner {
@@ -1090,14 +1094,14 @@ a { text-decoration: none; color: inherit; }
   justify-content: center;
   gap: 40px;
   padding: 20px 0;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .pricing-trust-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--color-text-muted);
+  color: #94a3b8;
   font-size: 0.9rem;
   font-weight: 500;
 }
