@@ -126,6 +126,7 @@ def status():
             "plan_tier": user.effective_plan_tier,
             "subscription_status": user.subscription_status,
             "is_paid": user.is_paid,
+            "is_admin": user.check_is_admin,
         },
     })
 

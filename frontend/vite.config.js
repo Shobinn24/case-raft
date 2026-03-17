@@ -9,6 +9,7 @@ export default defineConfig({
       '/auth': 'http://localhost:5000',
       '/api': 'http://localhost:5000',
       '/billing': 'http://localhost:5000',
+      '/admin': 'http://localhost:5000',
     },
   },
 })

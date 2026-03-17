@@ -20,11 +20,22 @@ class User(db.Model):
     subscription_status = db.Column(db.String(50), default="free")  # free, active, past_due, canceled
     plan_tier = db.Column(db.String(50), default="free")  # free, solo, team, firm
 
+    is_admin = db.Column(db.Boolean, default=False)
+
     reports = db.relationship("ReportHistory", backref="user", lazy=True)
 
     # Whitelisted domains/emails get free Firm access (no Stripe required)
     WHITELISTED_DOMAINS = {"trustice.us"}
     WHITELISTED_EMAILS = {"srhoades@trustice.us", "shobinn24@gmail.com"}
+
+    # Admin emails get access to the admin dashboard
+    ADMIN_EMAILS = {"shobinn24@gmail.com"}
+
+    @property
+    def check_is_admin(self):
+        if not self.email:
+            return False
+        return self.email.lower() in self.ADMIN_EMAILS or self.is_admin
 
     @property
     def is_whitelisted(self):

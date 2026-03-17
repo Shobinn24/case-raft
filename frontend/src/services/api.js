@@ -56,3 +56,9 @@ export const createPortal = () => api.post("/billing/portal");
 
 // Contact
 export const submitContact = (data) => api.post("/api/contact", data);
+
+// Admin
+export const getAdminStats = () => api.get("/admin/stats");
+export const getAdminErrors = (params) => api.get("/admin/errors", { params });
+export const getAdminErrorDetail = (errorId) => api.get(`/admin/errors/${errorId}`);
+export const getAdminUsers = () => api.get("/admin/users");
