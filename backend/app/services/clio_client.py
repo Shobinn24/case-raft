@@ -77,7 +77,16 @@ class ClioAPIClient:
                 retry_after = int(resp.headers.get("Retry-After", self.RETRY_DELAY))
                 time.sleep(retry_after)
                 continue
-            resp.raise_for_status()
+            if not resp.ok:
+                # Include Clio's error detail in the exception message
+                try:
+                    detail = resp.json()
+                except Exception:
+                    detail = resp.text[:500]
+                raise requests.HTTPError(
+                    f"{resp.status_code} {resp.reason} for url: {resp.url}\nClio response: {detail}",
+                    response=resp,
+                )
             return resp.json()
 
     def get_current_user(self):
@@ -165,10 +174,9 @@ class ClioAPIClient:
         """GET /bills.json — invoices for a matter."""
         params = {
             "fields": "id,number,issued_at,due_at,state,total,sub_total,"
-                      "balance,paid,paid_at,due,pending,"
+                      "balance,paid,paid_at,"
                       "tax_sum,total_tax,"
-                      "start_at,end_at,subject,type,"
-                      "services_sub_total",
+                      "start_at,end_at,subject,type",
             "matter_id": matter_id,
             "limit": 200,
             "order": "issued_at(desc)",
@@ -234,14 +242,31 @@ class ClioAPIClient:
         """GET /bills.json — all invoices firm-wide for a date range.
 
         issued_after/issued_before should be ISO date strings.
+        Includes line_items for per-user revenue attribution.
         """
         params = {
             "fields": "id,number,issued_at,due_at,state,total,sub_total,"
-                      "balance,paid,paid_at,due,pending,"
+                      "balance,paid,paid_at,"
                       "start_at,end_at,subject,type,"
-                      "matters{id,display_number,practice_area{name}},"
+                      "matters{id,display_number,practice_area},"
                       "line_items{id,type,total,quantity,price,"
-                      "activity{id,user{id,name}}}",
+                      "activity{id,user}}",
+            "issued_after": issued_after,
+            "issued_before": issued_before,
+            "limit": 200,
+            "order": "issued_at(desc)",
+        }
+        return self._request_all_pages("GET", "bills.json", params=params)
+
+    def get_all_bills_simple(self, issued_after, issued_before):
+        """GET /bills.json — lightweight bill fetch for revenue reports.
+
+        Only requests fields needed for practice-area revenue breakdown.
+        """
+        params = {
+            "fields": "id,number,issued_at,due_at,state,total,sub_total,"
+                      "balance,paid,paid_at,"
+                      "matters{id,display_number,practice_area}",
             "issued_after": issued_after,
             "issued_before": issued_before,
             "limit": 200,

@@ -211,27 +211,15 @@ def generate_firm_report():
     if not start_date or not end_date:
         return jsonify({"error": "start_date and end_date are required"}), 400
 
-    # Fetch firm-wide data from Clio
-    try:
-        users_resp = clio.get_users()
-        users_data = users_resp.get("data", [])
-    except Exception as e:
-        return jsonify({"error": f"Failed to fetch users: {str(e)}"}), 502
-
-    try:
-        activities_data = clio.get_all_activities(start_date, end_date)
-    except Exception as e:
-        return jsonify({"error": f"Failed to fetch activities: {str(e)}"}), 502
-
-    try:
-        bills_data = clio.get_all_bills(start_date, end_date)
-    except Exception as e:
-        return jsonify({"error": f"Failed to fetch bills: {str(e)}"}), 502
-
     options = data.get("options", {})
 
-    # Revenue by Practice Area uses a lighter data model (bills only)
+    # Revenue by Practice Area only needs bills — skip users/activities
     if report_type == "revenue_by_practice_area":
+        try:
+            bills_data = clio.get_all_bills_simple(start_date, end_date)
+        except Exception as e:
+            return jsonify({"error": f"Failed to fetch bills: {str(e)}"}), 502
+
         mode = options.get("mode", "collected")
         rev_data = RevenueByPracticeAreaData(
             start_date, end_date, bills_data, mode=mode
@@ -239,6 +227,23 @@ def generate_firm_report():
         report = RevenueByPracticeAreaReport(rev_data, user.id, options=options)
         record = report.generate()
     else:
+        # Fetch firm-wide data from Clio
+        try:
+            users_resp = clio.get_users()
+            users_data = users_resp.get("data", [])
+        except Exception as e:
+            return jsonify({"error": f"Failed to fetch users: {str(e)}"}), 502
+
+        try:
+            activities_data = clio.get_all_activities(start_date, end_date)
+        except Exception as e:
+            return jsonify({"error": f"Failed to fetch activities: {str(e)}"}), 502
+
+        try:
+            bills_data = clio.get_all_bills(start_date, end_date)
+        except Exception as e:
+            return jsonify({"error": f"Failed to fetch bills: {str(e)}"}), 502
+
         # Build full firm data model for productivity reports
         firm_data = FirmProductivityData(
             start_date, end_date, users_data, activities_data, bills_data
