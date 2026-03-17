@@ -206,6 +206,19 @@ class ClioAPIClient:
             params["page_token"] = page_token
         return all_data
 
+    def get_practice_areas(self):
+        """GET /practice_areas.json — list all practice areas.
+
+        Used to build an id->name lookup since practice_area is a
+        second-level nest on bills->matters and only returns defaults (id).
+        """
+        params = {
+            "fields": "id,name",
+            "limit": 200,
+            "order": "name(asc)",
+        }
+        return self._request("GET", "practice_areas.json", params=params)
+
     def get_users(self):
         """GET /users.json — list all firm employees."""
         params = {
@@ -243,14 +256,16 @@ class ClioAPIClient:
 
         issued_after/issued_before should be ISO date strings.
         Includes line_items for per-user revenue attribution.
+
+        NOTE: Clio API only allows 1 level of nested field specification.
+        Second-level nests (e.g. activity{user}) return defaults only (id, etag).
         """
         params = {
             "fields": "id,number,issued_at,due_at,state,total,sub_total,"
                       "balance,paid,paid_at,"
                       "start_at,end_at,subject,type,"
                       "matters{id,display_number,practice_area},"
-                      "line_items{id,type,total,quantity,price,"
-                      "activity{id,user}}",
+                      "line_items{id,type,total,quantity,price,activity}",
             "issued_after": issued_after,
             "issued_before": issued_before,
             "limit": 200,

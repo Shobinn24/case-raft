@@ -72,8 +72,10 @@ class EmployeeProductivity:
 class FirmProductivityData:
     """Aggregated firm-wide productivity data for a date range."""
 
-    def __init__(self, start_date, end_date, users_data, activities_data, bills_data):
+    def __init__(self, start_date, end_date, users_data, activities_data, bills_data,
+                 practice_area_lookup=None):
         self.start_date = start_date
+        self._pa_lookup = practice_area_lookup or {}
         self.end_date = end_date
 
         # Build user lookup from Clio users
@@ -233,10 +235,12 @@ class FirmProductivityData:
 
         # Revenue by Practice Area (for embeddable section in firm report)
         self.revenue_by_practice_area_collected = RevenueByPracticeArea(
-            bills_data, end_date, mode="collected"
+            bills_data, end_date, mode="collected",
+            practice_area_lookup=self._pa_lookup,
         )
         self.revenue_by_practice_area_outstanding = RevenueByPracticeArea(
-            bills_data, end_date, mode="outstanding"
+            bills_data, end_date, mode="outstanding",
+            practice_area_lookup=self._pa_lookup,
         )
 
     @property
@@ -265,15 +269,20 @@ class RevenueByPracticeArea:
         "91_plus": "91+ Days",
     }
 
-    def __init__(self, bills_data, reference_date_str, mode="collected"):
+    def __init__(self, bills_data, reference_date_str, mode="collected",
+                 practice_area_lookup=None):
         """
         Args:
             bills_data: raw bill dicts from Clio API (with matters nested).
             reference_date_str: ISO date string used as the aging reference point.
             mode: "collected" for paid revenue, "outstanding" for unpaid AR.
+            practice_area_lookup: dict mapping practice_area id -> name.
+                Needed because practice_area is a second-level nest on
+                bills->matters and Clio only returns default fields (id).
         """
         self.mode = mode
         self.reference_date = date_type.fromisoformat(reference_date_str)
+        pa_lookup = practice_area_lookup or {}
 
         # practice_area -> {bucket_key -> amount}
         pa_buckets = {}
@@ -284,9 +293,13 @@ class RevenueByPracticeArea:
             practice_area = "Uncategorized"
             if matters:
                 matter = matters[0] if isinstance(matters, list) else matters
-                pa = (matter.get("practice_area") or {}).get("name")
-                if pa:
-                    practice_area = pa
+                pa_obj = matter.get("practice_area") or {}
+                # Try name first (if Clio returns it), else use id lookup
+                pa_name = pa_obj.get("name")
+                if not pa_name and pa_obj.get("id"):
+                    pa_name = pa_lookup.get(pa_obj["id"])
+                if pa_name:
+                    practice_area = pa_name
 
             # Filter based on mode
             if mode == "collected":
@@ -360,11 +373,15 @@ class RevenueByPracticeArea:
 class RevenueByPracticeAreaData:
     """Standalone data model for the Revenue by Practice Area report."""
 
-    def __init__(self, start_date, end_date, bills_data, mode="collected"):
+    def __init__(self, start_date, end_date, bills_data, mode="collected",
+                 practice_area_lookup=None):
         self.start_date = start_date
         self.end_date = end_date
         self.mode = mode
-        self.revenue = RevenueByPracticeArea(bills_data, end_date, mode=mode)
+        self.revenue = RevenueByPracticeArea(
+            bills_data, end_date, mode=mode,
+            practice_area_lookup=practice_area_lookup,
+        )
 
     @property
     def title(self):

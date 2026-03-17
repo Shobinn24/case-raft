@@ -213,16 +213,27 @@ def generate_firm_report():
 
     options = data.get("options", {})
 
-    # Revenue by Practice Area only needs bills — skip users/activities
+    # Revenue by Practice Area only needs bills + practice area names
     if report_type == "revenue_by_practice_area":
         try:
             bills_data = clio.get_all_bills_simple(start_date, end_date)
         except Exception as e:
             return jsonify({"error": f"Failed to fetch bills: {str(e)}"}), 502
 
+        # Fetch practice areas for id->name lookup (second-level nests
+        # only return default fields like id, not name)
+        pa_lookup = {}
+        try:
+            pa_resp = clio.get_practice_areas()
+            for pa in pa_resp.get("data", []):
+                pa_lookup[pa["id"]] = pa.get("name", "Unknown")
+        except Exception:
+            pass  # Report still works — practice areas show as "Uncategorized"
+
         mode = options.get("mode", "collected")
         rev_data = RevenueByPracticeAreaData(
-            start_date, end_date, bills_data, mode=mode
+            start_date, end_date, bills_data, mode=mode,
+            practice_area_lookup=pa_lookup,
         )
         report = RevenueByPracticeAreaReport(rev_data, user.id, options=options)
         record = report.generate()
@@ -244,9 +255,19 @@ def generate_firm_report():
         except Exception as e:
             return jsonify({"error": f"Failed to fetch bills: {str(e)}"}), 502
 
+        # Fetch practice areas for id->name lookup
+        pa_lookup = {}
+        try:
+            pa_resp = clio.get_practice_areas()
+            for pa in pa_resp.get("data", []):
+                pa_lookup[pa["id"]] = pa.get("name", "Unknown")
+        except Exception:
+            pass
+
         # Build full firm data model for productivity reports
         firm_data = FirmProductivityData(
-            start_date, end_date, users_data, activities_data, bills_data
+            start_date, end_date, users_data, activities_data, bills_data,
+            practice_area_lookup=pa_lookup,
         )
         firm_report_classes = {
             "firm_productivity": FirmProductivityReport,
