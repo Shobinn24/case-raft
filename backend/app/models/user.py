@@ -24,7 +24,7 @@ class User(db.Model):
 
     # Whitelisted domains/emails get free Firm access (no Stripe required)
     WHITELISTED_DOMAINS = {"trustice.us"}
-    WHITELISTED_EMAILS = {"srhoades@trustice.us"}
+    WHITELISTED_EMAILS = {"srhoades@trustice.us", "shobinn24@gmail.com"}
 
     @property
     def is_whitelisted(self):
