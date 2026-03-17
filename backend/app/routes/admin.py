@@ -141,82 +141,76 @@ def clio_fields_debug():
 
     results = {}
 
-    # V3: Try outstanding_client_balances with explicit fields
+    # V4a: Access account_balance directly by ID (we know ID 1560833 exists)
     try:
-        resp = clio._request("GET", "outstanding_client_balances.json", params={
-            "fields": "id,contact,last_payment,newest_outstanding_bill,"
-                      "newest_outstanding_balance,pending_payments,"
-                      "total_outstanding_balance,trust_balance",
-            "limit": 5,
-        })
-        results["outstanding_balances_with_fields"] = resp.get("data", [])
+        resp = clio._request("GET", "account_balances/1560833.json", params={})
+        results["account_balance_by_id_default"] = resp.get("data", {})
     except Exception as e:
-        results["outstanding_balances_with_fields_error"] = str(e)
+        results["account_balance_by_id_default_error"] = str(e)
 
-    # V3: Try outstanding_client_balances with no fields (see defaults)
+    # V4b: Access account_balance by ID with all possible fields
     try:
-        resp = clio._request("GET", "outstanding_client_balances.json", params={
-            "limit": 5,
+        resp = clio._request("GET", "account_balances/1560833.json", params={
+            "fields": "id,balance,name,type",
         })
-        results["outstanding_balances_default"] = resp.get("data", [])
+        results["account_balance_by_id_fields"] = resp.get("data", {})
     except Exception as e:
-        results["outstanding_balances_default_error"] = str(e)
+        results["account_balance_by_id_fields_error"] = str(e)
 
-    # V3: Try trust_line_items with corrected order (id instead of date)
+    # V4c: Top-level account_balances endpoint (list)
     try:
-        resp = clio._request("GET", "trust_line_items.json", params={
-            "fields": "id,date,total,note,"
-                      "matter{id,display_number}",
-            "limit": 5,
-            "order": "id(desc)",
+        resp = clio._request("GET", "account_balances.json", params={
+            "limit": 10,
         })
-        results["trust_line_items"] = resp.get("data", [])
+        results["account_balances_list_default"] = resp.get("data", [])
     except Exception as e:
-        results["trust_line_items_error"] = str(e)
+        results["account_balances_list_default_error"] = str(e)
 
-    # V3: Try matters with billing_setting nested object
+    # V4d: Top-level account_balances with fields
     try:
-        resp = clio._request("GET", "matters.json", params={
-            "fields": "id,display_number,status,"
-                      "client{id,name},"
-                      "billing_setting,"
-                      "evergreen_retainer,"
-                      "custom_field_values{id,field_name,value}",
+        resp = clio._request("GET", "account_balances.json", params={
+            "fields": "id,balance,name,type",
+            "limit": 10,
+        })
+        results["account_balances_list_fields"] = resp.get("data", [])
+    except Exception as e:
+        results["account_balances_list_fields_error"] = str(e)
+
+    # V4e: Single matter by ID with account_balances
+    try:
+        matters_resp = clio._request("GET", "matters.json", params={
+            "fields": "id,display_number",
             "status": "open",
-            "limit": 5,
-            "order": "id(asc)",
+            "limit": 1,
         })
-        results["matters_with_billing_setting"] = resp.get("data", [])
+        matter_id = matters_resp.get("data", [{}])[0].get("id")
+        if matter_id:
+            resp = clio._request("GET", f"matters/{matter_id}.json", params={
+                "fields": "id,display_number,account_balances,"
+                          "evergreen_retainer,"
+                          "custom_field_values{id,field_name,value}",
+            })
+            results["single_matter_detail"] = resp.get("data", {})
     except Exception as e:
-        results["matters_with_billing_setting_error"] = str(e)
+        results["single_matter_detail_error"] = str(e)
 
-    # V3: Try matter-level trust request with different sub-fields
+    # V4f: Try trust_requests endpoint
     try:
-        resp = clio._request("GET", "matters.json", params={
-            "fields": "id,display_number,"
-                      "trust_balance,"
-                      "account_balances{id,name,balance,type,current_balance}",
-            "status": "open",
-            "limit": 2,
-            "order": "id(asc)",
-        })
-        results["matters_trust_balance_field"] = resp.get("data", [])
-    except Exception as e:
-        results["matters_trust_balance_field_error"] = str(e)
-
-    # V3: Try contacts endpoint for trust balance (some APIs put it on contacts)
-    try:
-        resp = clio._request("GET", "contacts.json", params={
-            "fields": "id,name,type,"
-                      "trust_balance,"
-                      "outstanding_balance,"
-                      "account_balances",
-            "type": "Company",
+        resp = clio._request("GET", "trust_requests.json", params={
             "limit": 5,
         })
-        results["contacts_with_balances"] = resp.get("data", [])
+        results["trust_requests"] = resp.get("data", [])
     except Exception as e:
-        results["contacts_with_balances_error"] = str(e)
+        results["trust_requests_error"] = str(e)
+
+    # V4g: Try matter_balances endpoint
+    try:
+        resp = clio._request("GET", "matter_balances.json", params={
+            "limit": 5,
+        })
+        results["matter_balances"] = resp.get("data", [])
+    except Exception as e:
+        results["matter_balances_error"] = str(e)
 
     return jsonify(results)
 
