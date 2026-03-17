@@ -143,3 +143,16 @@ class FirmProductivityReport(FirmReport):
         )
         with open(template_path) as f:
             return f.read()
+
+
+class RevenueByPracticeAreaReport(FirmReport):
+    """Generates a Revenue by Practice Area PDF report."""
+
+    REPORT_TYPE = "revenue_by_practice_area"
+
+    def _get_template(self):
+        template_path = os.path.join(
+            current_app.root_path, "templates", "revenue_by_practice_area.html"
+        )
+        with open(template_path) as f:
+            return f.read()

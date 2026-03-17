@@ -231,6 +231,14 @@ class FirmProductivityData:
             b["total"] for b in self.aging_buckets.values()
         )
 
+        # Revenue by Practice Area (for embeddable section in firm report)
+        self.revenue_by_practice_area_collected = RevenueByPracticeArea(
+            bills_data, end_date, mode="collected"
+        )
+        self.revenue_by_practice_area_outstanding = RevenueByPracticeArea(
+            bills_data, end_date, mode="outstanding"
+        )
+
     @property
     def title(self):
         return f"Firm Productivity ({self.start_date} to {self.end_date})"
@@ -244,3 +252,126 @@ class FirmProductivityData:
         if value is None:
             return "\u2014"
         return f"{value * 100:.1f}%"
+
+
+class RevenueByPracticeArea:
+    """Revenue (collected or outstanding) grouped by practice area and AR aging bucket."""
+
+    BUCKET_KEYS = ["1_30", "31_60", "61_90", "91_plus"]
+    BUCKET_LABELS = {
+        "1_30": "1-30 Days",
+        "31_60": "31-60 Days",
+        "61_90": "61-90 Days",
+        "91_plus": "91+ Days",
+    }
+
+    def __init__(self, bills_data, reference_date_str, mode="collected"):
+        """
+        Args:
+            bills_data: raw bill dicts from Clio API (with matters nested).
+            reference_date_str: ISO date string used as the aging reference point.
+            mode: "collected" for paid revenue, "outstanding" for unpaid AR.
+        """
+        self.mode = mode
+        self.reference_date = date_type.fromisoformat(reference_date_str)
+
+        # practice_area -> {bucket_key -> amount}
+        pa_buckets = {}
+
+        for b in bills_data:
+            # Determine practice area from the nested matter
+            matters = b.get("matters") or []
+            practice_area = "Uncategorized"
+            if matters:
+                matter = matters[0] if isinstance(matters, list) else matters
+                pa = (matter.get("practice_area") or {}).get("name")
+                if pa:
+                    practice_area = pa
+
+            # Filter based on mode
+            if mode == "collected":
+                if b.get("state") != "paid":
+                    continue
+                amount = b.get("paid") or 0
+                if amount <= 0:
+                    continue
+            else:  # outstanding
+                if b.get("state") == "paid":
+                    continue
+                amount = b.get("balance") or 0
+                if amount <= 0:
+                    continue
+
+            # Calculate age from issued_at
+            issued_at = b.get("issued_at")
+            if not issued_at:
+                continue
+            issued = date_type.fromisoformat(issued_at[:10])
+            age_days = (self.reference_date - issued).days
+
+            if age_days <= 30:
+                bucket = "1_30"
+            elif age_days <= 60:
+                bucket = "31_60"
+            elif age_days <= 90:
+                bucket = "61_90"
+            else:
+                bucket = "91_plus"
+
+            if practice_area not in pa_buckets:
+                pa_buckets[practice_area] = {k: 0.0 for k in self.BUCKET_KEYS}
+            pa_buckets[practice_area][bucket] += amount
+
+        # Build sorted rows
+        self.rows = []
+        for pa in sorted(pa_buckets.keys()):
+            buckets = pa_buckets[pa]
+            row_total = sum(buckets.values())
+            self.rows.append({
+                "practice_area": pa,
+                **buckets,
+                "total": row_total,
+            })
+
+        # Column totals
+        self.column_totals = {k: 0.0 for k in self.BUCKET_KEYS}
+        self.column_totals["total"] = 0.0
+        for row in self.rows:
+            for k in self.BUCKET_KEYS:
+                self.column_totals[k] += row[k]
+            self.column_totals["total"] += row["total"]
+
+    @property
+    def title(self):
+        if self.mode == "collected":
+            return "Collected Revenue by Practice Area"
+        return "Outstanding AR by Practice Area"
+
+    @property
+    def mode_label(self):
+        return "Collected Revenue" if self.mode == "collected" else "Outstanding Balance"
+
+    def format_currency(self, amount):
+        if amount is None:
+            return "\u2014"
+        return f"${amount:,.2f}"
+
+
+class RevenueByPracticeAreaData:
+    """Standalone data model for the Revenue by Practice Area report."""
+
+    def __init__(self, start_date, end_date, bills_data, mode="collected"):
+        self.start_date = start_date
+        self.end_date = end_date
+        self.mode = mode
+        self.revenue = RevenueByPracticeArea(bills_data, end_date, mode=mode)
+
+    @property
+    def title(self):
+        label = "Collected Revenue" if self.mode == "collected" else "Outstanding AR"
+        return f"{label} by Practice Area ({self.start_date} to {self.end_date})"
+
+    def format_currency(self, amount):
+        if amount is None:
+            return "\u2014"
+        return f"${amount:,.2f}"

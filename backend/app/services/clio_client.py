@@ -239,7 +239,7 @@ class ClioAPIClient:
             "fields": "id,number,issued_at,due_at,state,total,sub_total,"
                       "balance,paid,paid_at,due,pending,"
                       "start_at,end_at,subject,type,"
-                      "matters{id,display_number},"
+                      "matters{id,display_number,practice_area{name}},"
                       "line_items{id,type,total,quantity,price,"
                       "activity{id,user{id,name}}}",
             "issued_after": issued_after,

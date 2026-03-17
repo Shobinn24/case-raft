@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: letter landscape;
+    margin: 0.75in;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9pt;
+      color: #666;
+    }
+  }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    color: #333;
+    line-height: 1.5;
+  }
+  .header {
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+  }
+  .header h1 {
+    margin: 0 0 4px 0;
+    font-size: 20pt;
+    color: #2c3e50;
+  }
+  .header .subtitle {
+    font-size: 12pt;
+    color: #666;
+    margin: 0;
+  }
+  .header .date {
+    font-size: 9pt;
+    color: #999;
+    margin-top: 8px;
+  }
+  .header .mode-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 9pt;
+    font-weight: bold;
+    color: white;
+    margin-top: 8px;
+  }
+  .mode-collected { background-color: #27ae60; }
+  .mode-outstanding { background-color: #f39c12; }
+  h2 {
+    font-size: 14pt;
+    color: #2c3e50;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+    margin-top: 28px;
+    margin-bottom: 12px;
+  }
+  .summary-box {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .summary-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  .summary-item {
+    width: 20%;
+    padding: 8px 0;
+  }
+  .summary-item .label {
+    font-size: 8pt;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .summary-item .value {
+    font-size: 13pt;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-top: 2px;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 9pt;
+  }
+  table.data-table th {
+    padding: 6px 8px;
+    text-align: left;
+    background-color: #f5f6fa;
+    border-bottom: 2px solid #ddd;
+    font-weight: bold;
+    color: #555;
+    font-size: 8pt;
+    white-space: nowrap;
+  }
+  table.data-table td {
+    padding: 5px 8px;
+    font-weight: normal;
+    width: auto;
+    border-bottom: 1px solid #eee;
+    color: #333;
+    white-space: nowrap;
+  }
+  table.data-table td.currency {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  table.data-table th.currency {
+    text-align: right;
+  }
+  table.data-table tr.totals-row {
+    background-color: #f5f6fa;
+    font-weight: bold;
+  }
+  table.data-table tr.totals-row td {
+    border-top: 2px solid #2c3e50;
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  .empty-note {
+    font-style: italic;
+    color: #999;
+    margin: 8px 0;
+  }
+  .footer {
+    margin-top: 32px;
+    padding-top: 12px;
+    border-top: 1px solid #ddd;
+    font-size: 9pt;
+    color: #999;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>{{ data.revenue.title }}</h1>
+  <p class="subtitle">{{ data.start_date }} &mdash; {{ data.end_date }}</p>
+  <span class="mode-badge mode-{{ data.mode }}">{{ data.revenue.mode_label }}</span>
+  <p class="date">Generated {{ generated_at }}</p>
+</div>
+
+<!-- Summary -->
+<h2>Summary</h2>
+<div class="summary-box">
+  <div class="summary-grid">
+    <div class="summary-item">
+      <div class="label">Practice Areas</div>
+      <div class="value">{{ data.revenue.rows|length }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">1-30 Days</div>
+      <div class="value">{{ data.revenue.format_currency(data.revenue.column_totals['1_30']) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">31-60 Days</div>
+      <div class="value">{{ data.revenue.format_currency(data.revenue.column_totals['31_60']) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">61-90 Days</div>
+      <div class="value">{{ data.revenue.format_currency(data.revenue.column_totals['61_90']) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Grand Total</div>
+      <div class="value">{{ data.revenue.format_currency(data.revenue.column_totals['total']) }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Revenue by Practice Area Table -->
+<h2>{{ data.revenue.mode_label }} by Practice Area</h2>
+{% if data.revenue.rows %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Practice Area</th>
+      <th class="currency">1-30 Days</th>
+      <th class="currency">31-60 Days</th>
+      <th class="currency">61-90 Days</th>
+      <th class="currency">91+ Days</th>
+      <th class="currency">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in data.revenue.rows %}
+    <tr>
+      <td>{{ row.practice_area }}</td>
+      <td class="currency">{{ data.revenue.format_currency(row['1_30']) }}</td>
+      <td class="currency">{{ data.revenue.format_currency(row['31_60']) }}</td>
+      <td class="currency">{{ data.revenue.format_currency(row['61_90']) }}</td>
+      <td class="currency">{{ data.revenue.format_currency(row['91_plus']) }}</td>
+      <td class="currency">{{ data.revenue.format_currency(row['total']) }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="totals-row">
+      <td>Total</td>
+      <td class="currency">{{ data.revenue.format_currency(data.revenue.column_totals['1_30']) }}</td>
+      <td class="currency">{{ data.revenue.format_currency(data.revenue.column_totals['31_60']) }}</td>
+      <td class="currency">{{ data.revenue.format_currency(data.revenue.column_totals['61_90']) }}</td>
+      <td class="currency">{{ data.revenue.format_currency(data.revenue.column_totals['91_plus']) }}</td>
+      <td class="currency">{{ data.revenue.format_currency(data.revenue.column_totals['total']) }}</td>
+    </tr>
+  </tbody>
+</table>
+{% else %}
+<p class="empty-note">No {{ "paid" if data.mode == "collected" else "outstanding" }} invoices found for this date range.</p>
+{% endif %}
+
+<!-- Footer -->
+<div class="footer">
+  Generated by Case Raft &mdash; {{ generated_at }}
+</div>
+
+</body>
+</html>

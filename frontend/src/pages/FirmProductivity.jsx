@@ -11,6 +11,7 @@ const DEFAULT_SECTIONS = {
   aging: true,
   revenueSummary: true,
   invoiceList: true,
+  revenueByPracticeArea: true,
 };
 
 const SECTION_LABELS = {
@@ -23,6 +24,7 @@ const SECTION_LABELS = {
   aging: "AR Aging",
   revenueSummary: "Revenue Summary",
   invoiceList: "Invoice List",
+  revenueByPracticeArea: "Revenue by Practice Area",
 };
 
 export default function FirmProductivity() {

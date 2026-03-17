@@ -10,6 +10,7 @@ import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
 import ComparePlans from "./pages/ComparePlans";
 import Contact from "./pages/Contact";
+import RevenueReport from "./pages/RevenueReport";
 import logo from "./assets/caseraftlogo.jpg";
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
             <>
               <NavLink to="/cases">Cases</NavLink>
               <NavLink to="/firm-reports">Firm Reports</NavLink>
+              <NavLink to="/revenue-report">Revenue Report</NavLink>
               <NavLink to="/history">History</NavLink>
             </>
           )}
@@ -84,6 +86,7 @@ function App() {
               <Route path="/cases" element={<Cases />} />
               <Route path="/cases/:caseId" element={<CaseDetail />} />
               <Route path="/firm-reports" element={<FirmProductivity />} />
+              <Route path="/revenue-report" element={<RevenueReport />} />
               <Route path="/history" element={<History />} />
               <Route path="/pricing" element={<Pricing user={auth.user} />} />
               <Route path="/compare" element={<ComparePlans user={auth.user} />} />

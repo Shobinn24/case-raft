@@ -7,8 +7,8 @@ from flask import Blueprint, Response, jsonify, request, send_file, session, cur
 from app.models.report_history import ReportHistory
 from app.models.user import User
 from app.services.clio_client import ClioAPIClient
-from app.services.firm_data import FirmProductivityData
-from app.services.report import CaseSummaryReport, FirmProductivityReport
+from app.services.firm_data import FirmProductivityData, RevenueByPracticeAreaData
+from app.services.report import CaseSummaryReport, FirmProductivityReport, RevenueByPracticeAreaReport
 
 reports_bp = Blueprint("reports", __name__)
 
@@ -228,21 +228,30 @@ def generate_firm_report():
     except Exception as e:
         return jsonify({"error": f"Failed to fetch bills: {str(e)}"}), 502
 
-    # Build firm data model and generate report
-    firm_data = FirmProductivityData(
-        start_date, end_date, users_data, activities_data, bills_data
-    )
-
-    firm_report_classes = {
-        "firm_productivity": FirmProductivityReport,
-    }
-    report_cls = firm_report_classes.get(report_type)
-    if not report_cls:
-        return jsonify({"error": f"Unknown report type: {report_type}"}), 400
-
     options = data.get("options", {})
-    report = report_cls(firm_data, user.id, options=options)
-    record = report.generate()
+
+    # Revenue by Practice Area uses a lighter data model (bills only)
+    if report_type == "revenue_by_practice_area":
+        mode = options.get("mode", "collected")
+        rev_data = RevenueByPracticeAreaData(
+            start_date, end_date, bills_data, mode=mode
+        )
+        report = RevenueByPracticeAreaReport(rev_data, user.id, options=options)
+        record = report.generate()
+    else:
+        # Build full firm data model for productivity reports
+        firm_data = FirmProductivityData(
+            start_date, end_date, users_data, activities_data, bills_data
+        )
+        firm_report_classes = {
+            "firm_productivity": FirmProductivityReport,
+        }
+        report_cls = firm_report_classes.get(report_type)
+        if not report_cls:
+            return jsonify({"error": f"Unknown report type: {report_type}"}), 400
+
+        report = report_cls(firm_data, user.id, options=options)
+        record = report.generate()
 
     return jsonify({
         "message": "Report generated successfully",
