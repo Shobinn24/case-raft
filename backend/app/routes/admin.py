@@ -123,69 +123,6 @@ def admin_error_detail(error_id):
     return jsonify(log.to_dict())
 
 
-@admin_bp.route("/clio-fields-debug")
-def clio_fields_debug():
-    """Temporary debug endpoint to discover Clio API field structures for trust data."""
-    user, error = _require_admin()
-    if error:
-        return error
-
-    from app.services.clio_client import ClioAPIClient
-
-    clio = ClioAPIClient(
-        access_token=user.clio_access_token,
-        refresh_token=user.clio_refresh_token,
-        token_expires_at=user.token_expires_at,
-        user_id=user.id,
-    )
-
-    results = {}
-
-    # V6: Brute-force discover evergreen_retainer sub-fields one at a time.
-    # We know {minimum_balance, amount, balance, minimum_trust_balance, threshold}
-    # are all INVALID. Try more possible names.
-    field_guesses = [
-        "min_amount", "value", "retainer_amount", "minimum",
-        "notify_below", "low_balance", "trust_minimum",
-        "notification_amount", "replenish_amount", "target_balance",
-        "minimum_retainer", "retainer_minimum", "trust_threshold",
-        "created_at", "updated_at", "description", "name", "type",
-        "matter", "contact", "currency", "status", "enabled",
-    ]
-
-    for field in field_guesses:
-        try:
-            resp = clio._request("GET", "matters.json", params={
-                "fields": f"id,evergreen_retainer{{id,{field}}}",
-                "status": "open",
-                "limit": 1,
-                "order": "id(asc)",
-            })
-            data = resp.get("data", [])
-            if data:
-                results[f"field_{field}"] = data[0].get("evergreen_retainer")
-        except Exception as e:
-            err_msg = str(e)
-            # Only record if it's NOT an "invalid fields" error (those are expected)
-            if "not valid" not in err_msg.lower() and "invalid" not in err_msg.lower():
-                results[f"field_{field}_error"] = err_msg
-            # If invalid, skip silently
-
-    # Also try: just the matter with ID that has the evergreen_retainer set
-    # and request ALL fields on the matter (no field filter) to see full object
-    try:
-        resp = clio._request("GET", "matters/1769649983.json", params={})
-        matter = resp.get("data", {})
-        # Only return the evergreen_retainer part
-        results["matter_full_default"] = {
-            "evergreen_retainer": matter.get("evergreen_retainer"),
-            "id": matter.get("id"),
-        }
-    except Exception as e:
-        results["matter_full_default_error"] = str(e)
-
-    return jsonify(results)
-
 
 @admin_bp.route("/users")
 def admin_users():
