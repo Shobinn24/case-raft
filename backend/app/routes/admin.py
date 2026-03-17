@@ -141,51 +141,48 @@ def clio_fields_debug():
 
     results = {}
 
-    # V5: Focus on discovering evergreen_retainer sub-fields
-    # We know it returns {etag, id} without sub-fields.
-    # Try with various possible sub-field names.
+    # V6: Brute-force discover evergreen_retainer sub-fields one at a time.
+    # We know {minimum_balance, amount, balance, minimum_trust_balance, threshold}
+    # are all INVALID. Try more possible names.
+    field_guesses = [
+        "min_amount", "value", "retainer_amount", "minimum",
+        "notify_below", "low_balance", "trust_minimum",
+        "notification_amount", "replenish_amount", "target_balance",
+        "minimum_retainer", "retainer_minimum", "trust_threshold",
+        "created_at", "updated_at", "description", "name", "type",
+        "matter", "contact", "currency", "status", "enabled",
+    ]
 
-    # V5a: evergreen_retainer with common sub-fields
-    try:
-        resp = clio._request("GET", "matters.json", params={
-            "fields": "id,display_number,"
-                      "evergreen_retainer{id,minimum_balance,amount,balance,"
-                      "minimum_trust_balance,threshold},"
-                      "account_balances,"
-                      "custom_field_values{id,field_name,value}",
-            "status": "open",
-            "limit": 2,
-            "order": "id(asc)",
-        })
-        results["evergreen_v1_subfields"] = resp.get("data", [])
-    except Exception as e:
-        results["evergreen_v1_subfields_error"] = str(e)
+    for field in field_guesses:
+        try:
+            resp = clio._request("GET", "matters.json", params={
+                "fields": f"id,evergreen_retainer{{id,{field}}}",
+                "status": "open",
+                "limit": 1,
+                "order": "id(asc)",
+            })
+            data = resp.get("data", [])
+            if data:
+                results[f"field_{field}"] = data[0].get("evergreen_retainer")
+        except Exception as e:
+            err_msg = str(e)
+            # Only record if it's NOT an "invalid fields" error (those are expected)
+            if "not valid" not in err_msg.lower() and "invalid" not in err_msg.lower():
+                results[f"field_{field}_error"] = err_msg
+            # If invalid, skip silently
 
-    # V5b: Access evergreen_retainer by its ID directly (4517393)
+    # Also try: just the matter with ID that has the evergreen_retainer set
+    # and request ALL fields on the matter (no field filter) to see full object
     try:
-        resp = clio._request("GET", "evergreen_retainers/4517393.json", params={})
-        results["evergreen_by_id_default"] = resp.get("data", {})
+        resp = clio._request("GET", "matters/1769649983.json", params={})
+        matter = resp.get("data", {})
+        # Only return the evergreen_retainer part
+        results["matter_full_default"] = {
+            "evergreen_retainer": matter.get("evergreen_retainer"),
+            "id": matter.get("id"),
+        }
     except Exception as e:
-        results["evergreen_by_id_default_error"] = str(e)
-
-    # V5c: Try top-level evergreen_retainers endpoint
-    try:
-        resp = clio._request("GET", "evergreen_retainers.json", params={
-            "limit": 5,
-        })
-        results["evergreen_retainers_list"] = resp.get("data", [])
-    except Exception as e:
-        results["evergreen_retainers_list_error"] = str(e)
-
-    # V5d: Try evergreen_retainers with fields
-    try:
-        resp = clio._request("GET", "evergreen_retainers.json", params={
-            "fields": "id,minimum_balance,amount,balance,matter",
-            "limit": 5,
-        })
-        results["evergreen_retainers_with_fields"] = resp.get("data", [])
-    except Exception as e:
-        results["evergreen_retainers_with_fields_error"] = str(e)
+        results["matter_full_default_error"] = str(e)
 
     return jsonify(results)
 
