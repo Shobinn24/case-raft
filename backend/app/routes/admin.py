@@ -141,76 +141,51 @@ def clio_fields_debug():
 
     results = {}
 
-    # V4a: Access account_balance directly by ID (we know ID 1560833 exists)
-    try:
-        resp = clio._request("GET", "account_balances/1560833.json", params={})
-        results["account_balance_by_id_default"] = resp.get("data", {})
-    except Exception as e:
-        results["account_balance_by_id_default_error"] = str(e)
+    # V5: Focus on discovering evergreen_retainer sub-fields
+    # We know it returns {etag, id} without sub-fields.
+    # Try with various possible sub-field names.
 
-    # V4b: Access account_balance by ID with all possible fields
+    # V5a: evergreen_retainer with common sub-fields
     try:
-        resp = clio._request("GET", "account_balances/1560833.json", params={
-            "fields": "id,balance,name,type",
-        })
-        results["account_balance_by_id_fields"] = resp.get("data", {})
-    except Exception as e:
-        results["account_balance_by_id_fields_error"] = str(e)
-
-    # V4c: Top-level account_balances endpoint (list)
-    try:
-        resp = clio._request("GET", "account_balances.json", params={
-            "limit": 10,
-        })
-        results["account_balances_list_default"] = resp.get("data", [])
-    except Exception as e:
-        results["account_balances_list_default_error"] = str(e)
-
-    # V4d: Top-level account_balances with fields
-    try:
-        resp = clio._request("GET", "account_balances.json", params={
-            "fields": "id,balance,name,type",
-            "limit": 10,
-        })
-        results["account_balances_list_fields"] = resp.get("data", [])
-    except Exception as e:
-        results["account_balances_list_fields_error"] = str(e)
-
-    # V4e: Single matter by ID with account_balances
-    try:
-        matters_resp = clio._request("GET", "matters.json", params={
-            "fields": "id,display_number",
+        resp = clio._request("GET", "matters.json", params={
+            "fields": "id,display_number,"
+                      "evergreen_retainer{id,minimum_balance,amount,balance,"
+                      "minimum_trust_balance,threshold},"
+                      "account_balances,"
+                      "custom_field_values{id,field_name,value}",
             "status": "open",
-            "limit": 1,
+            "limit": 2,
+            "order": "id(asc)",
         })
-        matter_id = matters_resp.get("data", [{}])[0].get("id")
-        if matter_id:
-            resp = clio._request("GET", f"matters/{matter_id}.json", params={
-                "fields": "id,display_number,account_balances,"
-                          "evergreen_retainer,"
-                          "custom_field_values{id,field_name,value}",
-            })
-            results["single_matter_detail"] = resp.get("data", {})
+        results["evergreen_v1_subfields"] = resp.get("data", [])
     except Exception as e:
-        results["single_matter_detail_error"] = str(e)
+        results["evergreen_v1_subfields_error"] = str(e)
 
-    # V4f: Try trust_requests endpoint
+    # V5b: Access evergreen_retainer by its ID directly (4517393)
     try:
-        resp = clio._request("GET", "trust_requests.json", params={
+        resp = clio._request("GET", "evergreen_retainers/4517393.json", params={})
+        results["evergreen_by_id_default"] = resp.get("data", {})
+    except Exception as e:
+        results["evergreen_by_id_default_error"] = str(e)
+
+    # V5c: Try top-level evergreen_retainers endpoint
+    try:
+        resp = clio._request("GET", "evergreen_retainers.json", params={
             "limit": 5,
         })
-        results["trust_requests"] = resp.get("data", [])
+        results["evergreen_retainers_list"] = resp.get("data", [])
     except Exception as e:
-        results["trust_requests_error"] = str(e)
+        results["evergreen_retainers_list_error"] = str(e)
 
-    # V4g: Try matter_balances endpoint
+    # V5d: Try evergreen_retainers with fields
     try:
-        resp = clio._request("GET", "matter_balances.json", params={
+        resp = clio._request("GET", "evergreen_retainers.json", params={
+            "fields": "id,minimum_balance,amount,balance,matter",
             "limit": 5,
         })
-        results["matter_balances"] = resp.get("data", [])
+        results["evergreen_retainers_with_fields"] = resp.get("data", [])
     except Exception as e:
-        results["matter_balances_error"] = str(e)
+        results["evergreen_retainers_with_fields_error"] = str(e)
 
     return jsonify(results)
 
