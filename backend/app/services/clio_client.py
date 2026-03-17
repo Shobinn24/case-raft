@@ -273,6 +273,27 @@ class ClioAPIClient:
         }
         return self._request_all_pages("GET", "bills.json", params=params)
 
+    def get_matters_with_trust_data(self):
+        """GET /matters.json — all open matters with trust balances, thresholds, and custom fields.
+
+        Used for the Trust Management Report. Fetches:
+        - account_balances: trust account balance per matter
+        - evergreen_retainer: trust notification threshold (min balance)
+        - custom_field_values: for "Trust Commitment Program" and "Initial Trust Deposit"
+        - client: contact name for display
+        """
+        params = {
+            "fields": "id,display_number,description,status,"
+                      "client{id,name},"
+                      "account_balances,"
+                      "evergreen_retainer,"
+                      "custom_field_values{id,field_name,value}",
+            "status": "open",
+            "limit": 200,
+            "order": "id(asc)",
+        }
+        return self._request_all_pages("GET", "matters.json", params=params)
+
     def get_all_bills_simple(self, issued_after, issued_before):
         """GET /bills.json — lightweight bill fetch for revenue reports.
 

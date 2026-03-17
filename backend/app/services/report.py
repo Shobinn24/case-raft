@@ -156,3 +156,16 @@ class RevenueByPracticeAreaReport(FirmReport):
         )
         with open(template_path) as f:
             return f.read()
+
+
+class TrustManagementReport(FirmReport):
+    """Generates a Trust Management PDF report showing clients below trust threshold."""
+
+    REPORT_TYPE = "trust_management"
+
+    def _get_template(self):
+        template_path = os.path.join(
+            current_app.root_path, "templates", "trust_management.html"
+        )
+        with open(template_path) as f:
+            return f.read()

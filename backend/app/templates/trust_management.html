@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: letter landscape;
+    margin: 0.75in;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9pt;
+      color: #666;
+    }
+  }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    color: #333;
+    line-height: 1.5;
+  }
+  .header {
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+  }
+  .header h1 {
+    margin: 0 0 4px 0;
+    font-size: 20pt;
+    color: #2c3e50;
+  }
+  .header .subtitle {
+    font-size: 12pt;
+    color: #666;
+    margin: 0;
+  }
+  .header .date {
+    font-size: 9pt;
+    color: #999;
+    margin-top: 8px;
+  }
+  h2 {
+    font-size: 14pt;
+    color: #2c3e50;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+    margin-top: 28px;
+    margin-bottom: 12px;
+  }
+  .summary-box {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .summary-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  .summary-item {
+    width: 25%;
+    padding: 8px 0;
+  }
+  .summary-item .label {
+    font-size: 8pt;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .summary-item .value {
+    font-size: 13pt;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-top: 2px;
+  }
+  .summary-item .value.deficit {
+    color: #c0392b;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 9pt;
+  }
+  table.data-table th {
+    padding: 6px 8px;
+    text-align: left;
+    background-color: #f5f6fa;
+    border-bottom: 2px solid #ddd;
+    font-weight: bold;
+    color: #555;
+    font-size: 8pt;
+    white-space: nowrap;
+  }
+  table.data-table td {
+    padding: 5px 8px;
+    font-weight: normal;
+    width: auto;
+    border-bottom: 1px solid #eee;
+    color: #333;
+    white-space: nowrap;
+  }
+  table.data-table td.currency {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  table.data-table th.currency {
+    text-align: right;
+  }
+  table.data-table th.center,
+  table.data-table td.center {
+    text-align: center;
+  }
+  table.data-table tr.totals-row {
+    background-color: #f5f6fa;
+    font-weight: bold;
+  }
+  table.data-table tr.totals-row td {
+    border-top: 2px solid #2c3e50;
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  .deficit-high {
+    color: #c0392b;
+    font-weight: bold;
+  }
+  .deficit-medium {
+    color: #e67e22;
+    font-weight: bold;
+  }
+  .deficit-low {
+    color: #f39c12;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 8pt;
+    font-weight: bold;
+  }
+  .badge-tcp {
+    background-color: #3498db;
+    color: white;
+  }
+  .badge-non-tcp {
+    background-color: #95a5a6;
+    color: white;
+  }
+  .empty-note {
+    font-style: italic;
+    color: #999;
+    margin: 8px 0;
+  }
+  .footer {
+    margin-top: 32px;
+    padding-top: 12px;
+    border-top: 1px solid #ddd;
+    font-size: 9pt;
+    color: #999;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>Trust Management Report</h1>
+  <p class="subtitle">Clients Below Required Trust Balance</p>
+  <p class="date">Generated {{ generated_at }}</p>
+</div>
+
+<!-- Summary -->
+<h2>Summary</h2>
+<div class="summary-box">
+  <div class="summary-grid">
+    <div class="summary-item">
+      <div class="label">Matters Below Threshold</div>
+      <div class="value">{{ data.total_matters_below }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Total Deficit</div>
+      <div class="value deficit">{{ data.format_currency(data.total_deficit) }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">TCP Clients</div>
+      <div class="value">{{ data.tcp_count }}</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Non-TCP Clients</div>
+      <div class="value">{{ data.non_tcp_count }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Trust Management Table -->
+<h2>Clients Requiring Trust Replenishment</h2>
+{% if data.rows %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Client</th>
+      <th>Matter #</th>
+      <th class="currency">Amount in Trust</th>
+      <th class="currency">Min Threshold</th>
+      <th class="currency">Amount Below Trust</th>
+      <th class="center">In TCP</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in data.rows %}
+    <tr>
+      <td>{{ row.client_name }}</td>
+      <td>{{ row.matter_number }}</td>
+      <td class="currency">{{ data.format_currency(row.amount_in_trust) }}</td>
+      <td class="currency">{{ data.format_currency(row.min_threshold) }}</td>
+      <td class="currency {% if row.amount_below >= 5000 %}deficit-high{% elif row.amount_below >= 1000 %}deficit-medium{% else %}deficit-low{% endif %}">
+        {{ data.format_currency(row.amount_below) }}
+      </td>
+      <td class="center">
+        {% if row.is_tcp %}
+        <span class="badge badge-tcp">Yes</span>
+        {% else %}
+        <span class="badge badge-non-tcp">No</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    <tr class="totals-row">
+      <td colspan="4">Total</td>
+      <td class="currency">{{ data.format_currency(data.total_deficit) }}</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+{% else %}
+<p class="empty-note">All clients are at or above their required trust balance. No replenishment needed.</p>
+{% endif %}
+
+<!-- Footer -->
+<div class="footer">
+  Generated by Case Raft &mdash; {{ generated_at }}
+</div>
+
+</body>
+</html>

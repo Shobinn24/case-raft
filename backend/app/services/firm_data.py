@@ -382,6 +382,179 @@ class RevenueByPracticeArea:
         return f"${amount:,.2f}"
 
 
+class TrustManagementData:
+    """Data model for the Trust Management Report.
+
+    Identifies clients/matters whose trust balances are below the required
+    threshold. Two scenarios:
+    - Non-TCP (Trust Commitment Program disabled): threshold = initial trust deposit
+    - TCP (Trust Commitment Program enabled): threshold = Clio min trust threshold
+
+    The exact Clio API field names for trust balances / thresholds may need
+    adjustment after running the /admin/clio-fields-debug endpoint.
+    """
+
+    # Custom field names in Clio (case-insensitive matching)
+    TCP_FIELD_NAME = "trust commitment program"
+    INITIAL_DEPOSIT_FIELD_NAME = "initial trust deposit"
+
+    def __init__(self, matters_data):
+        self.rows = []
+        self.total_deficit = 0.0
+        self.total_matters_below = 0
+        self.tcp_count = 0
+        self.non_tcp_count = 0
+
+        for matter in matters_data:
+            client = matter.get("client") or {}
+            client_name = client.get("name") or "Unknown Client"
+            matter_display = matter.get("display_number") or str(matter.get("id", ""))
+
+            # --- Extract custom field values ---
+            custom_fields = matter.get("custom_field_values") or []
+            is_tcp = False
+            initial_deposit = None
+
+            for cf in custom_fields:
+                field_name = (cf.get("field_name") or "").strip().lower()
+                value = cf.get("value")
+
+                if field_name == self.TCP_FIELD_NAME:
+                    # Checkbox custom fields: value can be True/False, "Yes"/"No", etc.
+                    if isinstance(value, bool):
+                        is_tcp = value
+                    elif isinstance(value, str):
+                        is_tcp = value.lower() in ("true", "yes", "1", "on")
+                    else:
+                        is_tcp = bool(value)
+
+                elif field_name == self.INITIAL_DEPOSIT_FIELD_NAME:
+                    try:
+                        initial_deposit = float(value) if value else None
+                    except (ValueError, TypeError):
+                        initial_deposit = None
+
+            # --- Extract trust balance ---
+            # account_balances may be a dict or list — adjust after discovery
+            account_balances = matter.get("account_balances") or {}
+            trust_balance = self._extract_trust_balance(account_balances)
+
+            # --- Extract min threshold (Clio billing preference) ---
+            # evergreen_retainer may contain the trust notification threshold
+            evergreen = matter.get("evergreen_retainer") or {}
+            min_threshold_clio = self._extract_min_threshold(evergreen)
+
+            # --- Determine threshold based on TCP status ---
+            if is_tcp:
+                threshold = min_threshold_clio
+            else:
+                threshold = initial_deposit
+
+            # Skip matters with no threshold or no trust balance info
+            if threshold is None or threshold <= 0:
+                continue
+            if trust_balance is None:
+                trust_balance = 0.0
+
+            # Calculate deficit
+            deficit = threshold - trust_balance
+            if deficit <= 0:
+                continue  # Balance is at or above threshold — not included in report
+
+            self.rows.append({
+                "client_name": client_name,
+                "matter_number": matter_display,
+                "amount_in_trust": trust_balance,
+                "min_threshold": threshold,
+                "amount_below": deficit,
+                "is_tcp": is_tcp,
+            })
+            self.total_deficit += deficit
+            self.total_matters_below += 1
+            if is_tcp:
+                self.tcp_count += 1
+            else:
+                self.non_tcp_count += 1
+
+        # Sort by largest deficit first
+        self.rows.sort(key=lambda r: r["amount_below"], reverse=True)
+
+    def _extract_trust_balance(self, account_balances):
+        """Extract the trust account balance from the account_balances field.
+
+        The exact structure depends on Clio's API response.
+        Common patterns we'll try:
+        - account_balances as list of dicts with type/balance fields
+        - account_balances as dict with trust_balance key
+        - account_balances as list with balance sub-objects
+        """
+        if not account_balances:
+            return None
+
+        # If it's a list, look for a trust-type entry
+        if isinstance(account_balances, list):
+            for acct in account_balances:
+                acct_type = (acct.get("type") or acct.get("account_type") or "").lower()
+                if "trust" in acct_type:
+                    return self._parse_amount(acct.get("balance") or acct.get("amount"))
+            # If only one account, assume it's trust
+            if len(account_balances) == 1:
+                return self._parse_amount(
+                    account_balances[0].get("balance") or account_balances[0].get("amount")
+                )
+
+        # If it's a dict, try common field names
+        if isinstance(account_balances, dict):
+            for key in ("trust_balance", "trust", "balance"):
+                if key in account_balances:
+                    return self._parse_amount(account_balances[key])
+            # Maybe it's a flat dict with an amount
+            if "amount" in account_balances:
+                return self._parse_amount(account_balances["amount"])
+
+        return None
+
+    def _extract_min_threshold(self, evergreen):
+        """Extract the minimum trust threshold from evergreen_retainer.
+
+        This is Clio's "Notify when trust funds are below $X" value.
+        """
+        if not evergreen:
+            return None
+
+        if isinstance(evergreen, dict):
+            # Try common field names
+            for key in ("minimum_balance", "minimum_trust_balance",
+                        "min_balance", "threshold", "amount",
+                        "minimum_amount", "notification_threshold"):
+                if key in evergreen:
+                    return self._parse_amount(evergreen[key])
+            # If the evergreen dict itself has a numeric value we can use
+            if "balance" in evergreen:
+                return self._parse_amount(evergreen["balance"])
+
+        return None
+
+    @staticmethod
+    def _parse_amount(val):
+        """Safely parse a numeric amount from various formats."""
+        if val is None:
+            return None
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return None
+
+    @property
+    def title(self):
+        return "Trust Management Report"
+
+    def format_currency(self, amount):
+        if amount is None:
+            return "\u2014"
+        return f"${amount:,.2f}"
+
+
 class RevenueByPracticeAreaData:
     """Standalone data model for the Revenue by Practice Area report."""
 

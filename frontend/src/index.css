@@ -822,6 +822,26 @@ a { text-decoration: none; color: inherit; }
 }
 .mt-24 { margin-top: 24px; }
 
+/* ─── Trust Report Page ─── */
+.trust-info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+}
+.trust-info-list li {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #f0f7ff;
+  border-left: 3px solid var(--color-accent);
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+.trust-note {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
 /* ═══════════════════════════════════════════════
    PRICING PAGE — Premium Design
    ═══════════════════════════════════════════════ */

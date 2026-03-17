@@ -7,8 +7,11 @@ from flask import Blueprint, Response, jsonify, request, send_file, session, cur
 from app.models.report_history import ReportHistory
 from app.models.user import User
 from app.services.clio_client import ClioAPIClient
-from app.services.firm_data import FirmProductivityData, RevenueByPracticeAreaData
-from app.services.report import CaseSummaryReport, FirmProductivityReport, RevenueByPracticeAreaReport
+from app.services.firm_data import FirmProductivityData, RevenueByPracticeAreaData, TrustManagementData
+from app.services.report import (
+    CaseSummaryReport, FirmProductivityReport,
+    RevenueByPracticeAreaReport, TrustManagementReport,
+)
 
 reports_bp = Blueprint("reports", __name__)
 
@@ -204,14 +207,35 @@ def generate_firm_report():
     if not data:
         return jsonify({"error": "Request body is required"}), 400
 
+    report_type = data.get("report_type", "firm_productivity")
+    options = data.get("options", {})
+
+    # Trust Management Report — snapshot of current trust balances (no date range)
+    if report_type == "trust_management":
+        try:
+            matters_data = clio.get_matters_with_trust_data()
+        except Exception as e:
+            return jsonify({"error": f"Failed to fetch matters: {str(e)}"}), 502
+
+        trust_data = TrustManagementData(matters_data)
+        report = TrustManagementReport(trust_data, user.id, options=options)
+        record = report.generate()
+
+        return jsonify({
+            "message": "Report generated successfully",
+            "report": {
+                "id": record.id,
+                "case_name": record.case_name,
+                "report_type": record.report_type,
+                "generated_at": record.generated_at.isoformat(),
+            },
+        })
+
     start_date = data.get("start_date")
     end_date = data.get("end_date")
-    report_type = data.get("report_type", "firm_productivity")
 
     if not start_date or not end_date:
         return jsonify({"error": "start_date and end_date are required"}), 400
-
-    options = data.get("options", {})
 
     # Revenue by Practice Area only needs bills + practice area names
     if report_type == "revenue_by_practice_area":

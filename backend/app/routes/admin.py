@@ -123,6 +123,68 @@ def admin_error_detail(error_id):
     return jsonify(log.to_dict())
 
 
+@admin_bp.route("/clio-fields-debug")
+def clio_fields_debug():
+    """Temporary debug endpoint to discover Clio API field structures for trust data."""
+    user, error = _require_admin()
+    if error:
+        return error
+
+    from app.services.clio_client import ClioAPIClient
+
+    clio = ClioAPIClient(
+        access_token=user.clio_access_token,
+        refresh_token=user.clio_refresh_token,
+        token_expires_at=user.token_expires_at,
+        user_id=user.id,
+    )
+
+    results = {}
+
+    # Try fetching a single matter with trust-related fields
+    try:
+        resp = clio._request("GET", "matters.json", params={
+            "fields": "id,display_number,description,status,"
+                      "client{id,name},"
+                      "account_balances,"
+                      "evergreen_retainer,"
+                      "custom_field_values{id,field_name,value}",
+            "status": "open",
+            "limit": 5,
+            "order": "id(asc)",
+        })
+        results["matters_with_trust_fields"] = resp.get("data", [])
+    except Exception as e:
+        results["matters_error"] = str(e)
+
+    # Try fetching bank accounts to see trust account structure
+    try:
+        resp = clio._request("GET", "bank_accounts.json", params={
+            "fields": "id,name,type,balance,currency,account_type,"
+                      "clio_payments_enabled,domicile,holder",
+            "limit": 10,
+        })
+        results["bank_accounts"] = resp.get("data", [])
+    except Exception as e:
+        results["bank_accounts_error"] = str(e)
+
+    # Try trust_line_items endpoint
+    try:
+        resp = clio._request("GET", "trust_line_items.json", params={
+            "fields": "id,date,type,total,note,"
+                      "matter{id,display_number},"
+                      "contact{id,name},"
+                      "bank_account{id,name}",
+            "limit": 5,
+            "order": "date(desc)",
+        })
+        results["trust_line_items"] = resp.get("data", [])
+    except Exception as e:
+        results["trust_line_items_error"] = str(e)
+
+    return jsonify(results)
+
+
 @admin_bp.route("/users")
 def admin_users():
     """List all registered users with report counts."""
