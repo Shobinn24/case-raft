@@ -386,14 +386,18 @@ class TrustManagementData:
     """Data model for the Trust Management Report.
 
     Identifies clients/matters whose trust balances are below the required
-    threshold. Two scenarios:
-    - Non-TCP (Trust Commitment Program disabled): threshold = initial trust deposit
-    - TCP (Trust Commitment Program enabled): threshold = Clio evergreen retainer min
+    threshold. The "Initial Trust Deposit" custom field is used as the
+    minimum threshold for all matters (both TCP and non-TCP).
+
+    The "Trust Commitment Program" custom field is informational — it shows
+    whether the client is in TCP in the report, but both use the same
+    threshold field since Clio's API does not expose the evergreen retainer
+    threshold amount.
 
     Clio API field structures (confirmed via debug endpoint):
     - account_balances: list of dicts with keys {id, balance, currency_id, name, type}
       where type is "Operating" or "Trust"
-    - evergreen_retainer: dict or numeric — the trust notification threshold
+    - evergreen_retainer: only has {id, created_at, updated_at} — no threshold amount
     - custom_field_values: list of dicts with {id, field_name, value}
     """
 
@@ -443,16 +447,11 @@ class TrustManagementData:
             account_balances = matter.get("account_balances") or []
             trust_balance = self._extract_trust_balance(account_balances)
 
-            # --- Extract min threshold (Clio billing preference) ---
-            # evergreen_retainer: the "Notify when trust funds are below $X" value
-            evergreen = matter.get("evergreen_retainer")
-            min_threshold_clio = self._extract_min_threshold(evergreen)
-
-            # --- Determine threshold based on TCP status ---
-            if is_tcp:
-                threshold = min_threshold_clio
-            else:
-                threshold = initial_deposit
+            # --- Determine threshold ---
+            # Use "Initial Trust Deposit" custom field as threshold for all matters.
+            # Clio's evergreen_retainer API does not expose the threshold amount,
+            # so we use the same custom field for both TCP and non-TCP clients.
+            threshold = initial_deposit
 
             # Skip matters with no threshold or no trust balance info
             if threshold is None or threshold <= 0:
@@ -507,37 +506,6 @@ class TrustManagementData:
         if isinstance(account_balances, dict):
             if account_balances.get("type", "").lower() == "trust":
                 return self._parse_amount(account_balances.get("balance"))
-
-        return None
-
-    def _extract_min_threshold(self, evergreen):
-        """Extract the minimum trust threshold from evergreen_retainer.
-
-        This is Clio's "Notify when trust funds are below $X" value.
-        The exact format may be:
-        - A numeric value directly
-        - A dict with amount/threshold/minimum fields
-        - None if not configured
-        """
-        if evergreen is None:
-            return None
-
-        # If it's already a number, return it directly
-        if isinstance(evergreen, (int, float)):
-            return float(evergreen)
-
-        # If it's a dict, try known field names
-        if isinstance(evergreen, dict):
-            for key in ("minimum_balance", "minimum_trust_balance",
-                        "min_balance", "threshold", "amount",
-                        "minimum_amount", "notification_threshold",
-                        "balance", "value"):
-                if key in evergreen:
-                    return self._parse_amount(evergreen[key])
-
-        # If it's a string that looks like a number
-        if isinstance(evergreen, str):
-            return self._parse_amount(evergreen)
 
         return None
 
