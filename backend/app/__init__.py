@@ -72,6 +72,11 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix="/admin")
 
     # ---- Error logging middleware ----
+
+    # Known bot/scanner paths — ignore these to keep logs clean
+    _BOT_PATHS = {"/", "/index.php", "/wp-login.php", "/wp-admin",
+                  "/.env", "/xmlrpc.php", "/config.php", "/robots.txt"}
+
     @app.after_request
     def log_errors(response):
         """Log 4xx and 5xx responses to the error_logs table."""
@@ -81,6 +86,11 @@ def create_app():
         if request.method == "OPTIONS":
             return response
         if request.path.startswith("/assets/") or request.path.endswith((".js", ".css", ".ico", ".png", ".jpg")):
+            return response
+        # Skip bot/scanner noise (unauthenticated POST to common scan targets)
+        if not session.get("user_id") and request.path in _BOT_PATHS:
+            return response
+        if request.path.endswith(".php"):
             return response
 
         try:
@@ -126,6 +136,11 @@ def create_app():
     @app.errorhandler(Exception)
     def handle_exception(e):
         """Catch unhandled exceptions, log them, and return 500."""
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            # Let HTTP exceptions (404, 405, etc.) pass through normally.
+            # They're already logged by the after_request handler above.
+            return e
         try:
             from app.models.error_log import ErrorLog
 
