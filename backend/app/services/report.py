@@ -1,7 +1,7 @@
 import os
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from flask import current_app, render_template_string
 
@@ -19,7 +19,8 @@ class Report(ABC):
                  bills=None, activities=None):
         self.case = Case(case_data)
         self.user_id = user_id
-        self.generated_at = datetime.utcnow().strftime("%B %d, %Y at %I:%M %p")
+        eastern = timezone(timedelta(hours=-4))
+        self.generated_at = datetime.now(eastern).strftime("%B %d, %Y at %I:%M %p")
 
         # Populate related contacts (opposing parties, counsel, court)
         if related_contacts:
@@ -92,7 +93,8 @@ class FirmReport(ABC):
         self.firm_data = firm_data
         self.user_id = user_id
         self.options = options or {}
-        self.generated_at = datetime.utcnow().strftime("%B %d, %Y at %I:%M %p")
+        eastern = timezone(timedelta(hours=-4))
+        self.generated_at = datetime.now(eastern).strftime("%B %d, %Y at %I:%M %p")
 
     @abstractmethod
     def _get_template(self):
