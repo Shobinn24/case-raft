@@ -7,7 +7,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from app.services.firm_data import RevenueByPracticeArea
 
 
-def make_bill(number, issued_at, state, total, paid, balance, practice_area):
+def make_bill(number, issued_at, state, total, paid, balance, practice_area,
+              paid_at=None):
     """Create a fake bill dict matching Clio API structure."""
     return {
         "id": int(number),
@@ -19,7 +20,7 @@ def make_bill(number, issued_at, state, total, paid, balance, practice_area):
         "sub_total": total,
         "balance": balance,
         "paid": paid,
-        "paid_at": "2026-03-15" if state == "paid" else None,
+        "paid_at": paid_at if paid_at else ("2026-03-15" if state == "paid" else None),
         "matters": [
             {
                 "id": 1,
@@ -34,18 +35,25 @@ def make_bill(number, issued_at, state, total, paid, balance, practice_area):
 REF_DATE = "2026-03-16"
 
 # Build test bills with known values
+# For COLLECTED mode: aging = paid_at - issued_at (how long it took to collect)
+# For OUTSTANDING mode: aging = reference_date - issued_at (how old the unpaid bill is)
 FAKE_BILLS = [
     # --- PAID bills (for "collected" mode) ---
-    # Family Law: issued 10 days ago (1-30 bucket), paid $1,000
-    make_bill(1, "2026-03-06", "paid", 1000, 1000, 0, "Family Law"),
-    # Family Law: issued 45 days ago (31-60 bucket), paid $2,000
-    make_bill(2, "2026-01-30", "paid", 2000, 2000, 0, "Family Law"),
-    # Criminal Law: issued 5 days ago (1-30 bucket), paid $500
-    make_bill(3, "2026-03-11", "paid", 500, 500, 0, "Criminal Law"),
-    # Criminal Law: issued 80 days ago (61-90 bucket), paid $3,000
-    make_bill(4, "2025-12-26", "paid", 3000, 3000, 0, "Criminal Law"),
-    # Real Estate: issued 100 days ago (91+ bucket), paid $5,000
-    make_bill(5, "2025-12-06", "paid", 5000, 5000, 0, "Real Estate"),
+    # Family Law: issued Jan 15, paid Jan 25 (10 days -> 1-30 bucket), $1,000
+    make_bill(1, "2026-01-15", "paid", 1000, 1000, 0, "Family Law",
+              paid_at="2026-01-25"),
+    # Family Law: issued Jan 1, paid Feb 15 (45 days -> 31-60 bucket), $2,000
+    make_bill(2, "2026-01-01", "paid", 2000, 2000, 0, "Family Law",
+              paid_at="2026-02-15"),
+    # Criminal Law: issued Mar 1, paid Mar 5 (4 days -> 1-30 bucket), $500
+    make_bill(3, "2026-03-01", "paid", 500, 500, 0, "Criminal Law",
+              paid_at="2026-03-05"),
+    # Criminal Law: issued Nov 1, paid Feb 1 (92 days -> 91+ bucket), $3,000
+    make_bill(4, "2025-11-01", "paid", 3000, 3000, 0, "Criminal Law",
+              paid_at="2026-02-01"),
+    # Real Estate: issued Oct 1, paid Jan 15 (106 days -> 91+ bucket), $5,000
+    make_bill(5, "2025-10-01", "paid", 5000, 5000, 0, "Real Estate",
+              paid_at="2026-01-15"),
 
     # --- UNPAID bills (for "outstanding" mode) ---
     # Family Law: issued 20 days ago (1-30 bucket), $800 outstanding
@@ -97,8 +105,14 @@ def test_collected_mode():
     )
 
     # Verify expected values
-    print("\n--- EXPECTED ---")
-    print("Criminal Law:  1-30=$500, 61-90=$3,000, total=$3,500")
+    # Aging for collected = paid_at - issued_at
+    # Bill 1: Family, paid_at - issued_at = 10 days -> 1-30, $1,000
+    # Bill 2: Family, paid_at - issued_at = 45 days -> 31-60, $2,000
+    # Bill 3: Criminal, paid_at - issued_at = 4 days -> 1-30, $500
+    # Bill 4: Criminal, paid_at - issued_at = 92 days -> 91+, $3,000
+    # Bill 5: Real Estate, paid_at - issued_at = 106 days -> 91+, $5,000
+    print("\n--- EXPECTED (aging = days to collect: paid_at - issued_at) ---")
+    print("Criminal Law:  1-30=$500, 91+=$3,000, total=$3,500")
     print("Family Law:    1-30=$1,000, 31-60=$2,000, total=$3,000")
     print("Real Estate:   91+=$5,000, total=$5,000")
     print("GRAND TOTAL:   $11,500")
@@ -106,18 +120,18 @@ def test_collected_mode():
     # Assertions
     errors = []
 
-    # Criminal Law
+    # Criminal Law: $500 in 1-30, $3000 in 91+
     crim = next((r for r in rev.rows if r["practice_area"] == "Criminal Law"), None)
     if crim:
         if crim["1_30"] != 500: errors.append(f"Criminal 1-30: expected 500, got {crim['1_30']}")
         if crim["31_60"] != 0: errors.append(f"Criminal 31-60: expected 0, got {crim['31_60']}")
-        if crim["61_90"] != 3000: errors.append(f"Criminal 61-90: expected 3000, got {crim['61_90']}")
-        if crim["91_plus"] != 0: errors.append(f"Criminal 91+: expected 0, got {crim['91_plus']}")
+        if crim["61_90"] != 0: errors.append(f"Criminal 61-90: expected 0, got {crim['61_90']}")
+        if crim["91_plus"] != 3000: errors.append(f"Criminal 91+: expected 3000, got {crim['91_plus']}")
         if crim["total"] != 3500: errors.append(f"Criminal total: expected 3500, got {crim['total']}")
     else:
         errors.append("Criminal Law row missing!")
 
-    # Family Law
+    # Family Law: $1000 in 1-30, $2000 in 31-60
     fam = next((r for r in rev.rows if r["practice_area"] == "Family Law"), None)
     if fam:
         if fam["1_30"] != 1000: errors.append(f"Family 1-30: expected 1000, got {fam['1_30']}")
@@ -127,7 +141,7 @@ def test_collected_mode():
     else:
         errors.append("Family Law row missing!")
 
-    # Real Estate
+    # Real Estate: $5000 in 91+
     re_ = next((r for r in rev.rows if r["practice_area"] == "Real Estate"), None)
     if re_:
         if re_["91_plus"] != 5000: errors.append(f"RealEstate 91+: expected 5000, got {re_['91_plus']}")
@@ -241,18 +255,21 @@ def test_clio_style_id_only():
     # Bills with practice_area as id-only (what Clio actually returns)
     clio_bills = [
         {
-            "id": 1, "number": "1", "issued_at": "2026-03-06",
+            "id": 1, "number": "1", "issued_at": "2026-03-01",
             "state": "paid", "total": 1000, "paid": 1000, "balance": 0,
+            "paid_at": "2026-03-10",
             "matters": [{"id": 10, "practice_area": {"id": 101}}],
         },
         {
             "id": 2, "number": "2", "issued_at": "2026-01-30",
             "state": "paid", "total": 2000, "paid": 2000, "balance": 0,
+            "paid_at": "2026-02-15",
             "matters": [{"id": 11, "practice_area": {"id": 102}}],
         },
         {
-            "id": 3, "number": "3", "issued_at": "2026-03-11",
+            "id": 3, "number": "3", "issued_at": "2026-03-05",
             "state": "paid", "total": 500, "paid": 500, "balance": 0,
+            "paid_at": "2026-03-12",
             "matters": [{"id": 12, "practice_area": {"id": 101}}],
         },
     ]

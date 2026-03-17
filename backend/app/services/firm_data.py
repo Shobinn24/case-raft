@@ -315,12 +315,24 @@ class RevenueByPracticeArea:
                 if amount <= 0:
                     continue
 
-            # Calculate age from issued_at
+            # Calculate age for bucket placement
             issued_at = b.get("issued_at")
             if not issued_at:
                 continue
             issued = date_type.fromisoformat(issued_at[:10])
-            age_days = (self.reference_date - issued).days
+
+            if mode == "collected":
+                # For collected revenue: age = how long the bill was
+                # outstanding before being paid (paid_at - issued_at)
+                paid_at = b.get("paid_at")
+                if not paid_at:
+                    continue
+                paid_date = date_type.fromisoformat(paid_at[:10])
+                age_days = (paid_date - issued).days
+            else:
+                # For outstanding AR: age = how old the unpaid bill is
+                # from the reference date (end of report period)
+                age_days = (self.reference_date - issued).days
 
             if age_days <= 30:
                 bucket = "1_30"
