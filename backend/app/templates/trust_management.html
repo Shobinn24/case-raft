@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <style>
   @page {
-    size: letter landscape;
+    size: letter portrait;
     margin: 0.75in;
     @bottom-center {
       content: "Page " counter(page) " of " counter(pages);
@@ -176,8 +176,8 @@
 <div class="summary-box">
   <div class="summary-grid">
     <div class="summary-item">
-      <div class="label">Matters Below Threshold</div>
-      <div class="value">{{ data.total_matters_below }}</div>
+      <div class="label">Clients Below Threshold</div>
+      <div class="value">{{ data.total_clients_below }}</div>
     </div>
     <div class="summary-item">
       <div class="label">Total Deficit</div>
@@ -201,7 +201,6 @@
   <thead>
     <tr>
       <th>Client</th>
-      <th>Matter #</th>
       <th class="currency">Amount in Trust</th>
       <th class="currency">Min Threshold</th>
       <th class="currency">Amount Below Trust</th>
@@ -212,7 +211,6 @@
     {% for row in data.rows %}
     <tr>
       <td>{{ row.client_name }}</td>
-      <td>{{ row.matter_number }}</td>
       <td class="currency">{{ data.format_currency(row.amount_in_trust) }}</td>
       <td class="currency">{{ data.format_currency(row.min_threshold) }}</td>
       <td class="currency {% if row.amount_below >= 5000 %}deficit-high{% elif row.amount_below >= 1000 %}deficit-medium{% else %}deficit-low{% endif %}">
@@ -228,7 +226,7 @@
     </tr>
     {% endfor %}
     <tr class="totals-row">
-      <td colspan="4">Total</td>
+      <td colspan="3">Total</td>
       <td class="currency">{{ data.format_currency(data.total_deficit) }}</td>
       <td></td>
     </tr>

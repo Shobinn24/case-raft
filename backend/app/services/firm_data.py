@@ -408,14 +408,17 @@ class TrustManagementData:
     def __init__(self, matters_data):
         self.rows = []
         self.total_deficit = 0.0
-        self.total_matters_below = 0
+        self.total_clients_below = 0
         self.tcp_count = 0
         self.non_tcp_count = 0
+
+        # Aggregate at the client level: group all matters by client name,
+        # sum trust balances, sum thresholds, and compute deficit per client.
+        client_data = {}  # client_name -> {trust_balance, threshold, is_tcp}
 
         for matter in matters_data:
             client = matter.get("client") or {}
             client_name = client.get("name") or "Unknown Client"
-            matter_display = matter.get("display_number") or str(matter.get("id", ""))
 
             # --- Extract custom field values ---
             custom_fields = matter.get("custom_field_values") or []
@@ -442,39 +445,51 @@ class TrustManagementData:
                         initial_deposit = None
 
             # --- Extract trust balance ---
-            # account_balances is a list of dicts: [{id, balance, name, type, currency_id}]
-            # type is "Operating" or "Trust" — we want the "Trust" entry
             account_balances = matter.get("account_balances") or []
             trust_balance = self._extract_trust_balance(account_balances)
 
             # --- Determine threshold ---
-            # Use "Initial Trust Deposit" custom field as threshold for all matters.
-            # Clio's evergreen_retainer API does not expose the threshold amount,
-            # so we use the same custom field for both TCP and non-TCP clients.
             threshold = initial_deposit
 
-            # Skip matters with no threshold or no trust balance info
+            # Skip matters with no threshold
             if threshold is None or threshold <= 0:
                 continue
             if trust_balance is None:
                 trust_balance = 0.0
 
-            # Calculate deficit
-            deficit = threshold - trust_balance
-            if deficit <= 0:
-                continue  # Balance is at or above threshold — not included in report
+            # Calculate per-matter deficit (only count positive deficits)
+            matter_deficit = max(0, threshold - trust_balance)
+
+            # Accumulate into client-level data
+            if client_name not in client_data:
+                client_data[client_name] = {
+                    "amount_in_trust": 0.0,
+                    "min_threshold": 0.0,
+                    "amount_below": 0.0,
+                    "is_tcp": False,
+                }
+            client_data[client_name]["amount_in_trust"] += trust_balance
+            client_data[client_name]["min_threshold"] += threshold
+            client_data[client_name]["amount_below"] += matter_deficit
+            # If any matter for this client is in TCP, mark client as TCP
+            if is_tcp:
+                client_data[client_name]["is_tcp"] = True
+
+        # Build rows — only include clients with a deficit > 0
+        for client_name, data in client_data.items():
+            if data["amount_below"] <= 0:
+                continue
 
             self.rows.append({
                 "client_name": client_name,
-                "matter_number": matter_display,
-                "amount_in_trust": trust_balance,
-                "min_threshold": threshold,
-                "amount_below": deficit,
-                "is_tcp": is_tcp,
+                "amount_in_trust": data["amount_in_trust"],
+                "min_threshold": data["min_threshold"],
+                "amount_below": data["amount_below"],
+                "is_tcp": data["is_tcp"],
             })
-            self.total_deficit += deficit
-            self.total_matters_below += 1
-            if is_tcp:
+            self.total_deficit += data["amount_below"]
+            self.total_clients_below += 1
+            if data["is_tcp"]:
                 self.tcp_count += 1
             else:
                 self.non_tcp_count += 1
