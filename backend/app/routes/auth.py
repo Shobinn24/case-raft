@@ -81,6 +81,7 @@ def callback():
     clio = ClioAPIClient(access_token, refresh_token, expires_at, user_id=None)
     user_info = clio.get_current_user()
     email = user_info["data"]["email"]
+    user_tz = user_info["data"].get("time_zone")
 
     # Upsert user
     user = User.query.filter_by(email=email).first()
@@ -88,6 +89,7 @@ def callback():
         user.clio_access_token = access_token
         user.clio_refresh_token = refresh_token
         user.token_expires_at = expires_at
+        user.timezone = user_tz
         user.updated_at = datetime.utcnow()
     else:
         user = User(
@@ -95,6 +97,7 @@ def callback():
             clio_access_token=access_token,
             clio_refresh_token=refresh_token,
             token_expires_at=expires_at,
+            timezone=user_tz,
         )
         db.session.add(user)
 

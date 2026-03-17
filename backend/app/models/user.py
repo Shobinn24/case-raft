@@ -21,6 +21,7 @@ class User(db.Model):
     plan_tier = db.Column(db.String(50), default="free")  # free, solo, team, firm
 
     is_admin = db.Column(db.Boolean, default=False)
+    timezone = db.Column(db.String(50), nullable=True)  # e.g. "Eastern Time (US & Canada)"
 
     reports = db.relationship("ReportHistory", backref="user", lazy=True)
 

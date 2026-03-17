@@ -91,7 +91,7 @@ class ClioAPIClient:
 
     def get_current_user(self):
         """GET /users/who_am_i.json — returns the authenticated user's info."""
-        return self._request("GET", "users/who_am_i.json", params={"fields": "id,name,email"})
+        return self._request("GET", "users/who_am_i.json", params={"fields": "id,name,email,time_zone"})
 
     def get_matters(self, status="open", limit=200, page_token=None):
         """GET /matters.json — list matters."""

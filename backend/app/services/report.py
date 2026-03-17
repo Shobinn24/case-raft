@@ -9,6 +9,32 @@ from app.extensions import db
 from app.models.report_history import ReportHistory
 from app.services.case import Case
 
+# Mapping of common Clio timezone names to UTC offsets (hours).
+# Clio uses Rails-style timezone names (e.g., "Eastern Time (US & Canada)").
+_TZ_OFFSETS = {
+    "eastern time (us & canada)": -4,
+    "central time (us & canada)": -5,
+    "mountain time (us & canada)": -6,
+    "pacific time (us & canada)": -7,
+    "alaska": -8,
+    "hawaii": -10,
+    "atlantic time (canada)": -3,
+    "arizona": -7,
+    "indiana (east)": -4,
+    "utc": 0,
+    "london": 1,
+}
+
+
+def _get_tz(user_tz_name):
+    """Return a timezone object from a Clio timezone name. Falls back to Eastern."""
+    if user_tz_name:
+        offset = _TZ_OFFSETS.get(user_tz_name.strip().lower())
+        if offset is not None:
+            return timezone(timedelta(hours=offset))
+    # Default to Eastern if unknown
+    return timezone(timedelta(hours=-4))
+
 
 class Report(ABC):
     """Abstract base class for all report types."""
@@ -16,11 +42,11 @@ class Report(ABC):
     REPORT_TYPE = "base"
 
     def __init__(self, case_data, user_id, related_contacts=None,
-                 bills=None, activities=None):
+                 bills=None, activities=None, user_tz=None):
         self.case = Case(case_data)
         self.user_id = user_id
-        eastern = timezone(timedelta(hours=-4))
-        self.generated_at = datetime.now(eastern).strftime("%B %d, %Y at %I:%M %p")
+        tz = _get_tz(user_tz)
+        self.generated_at = datetime.now(tz).strftime("%B %d, %Y at %I:%M %p")
 
         # Populate related contacts (opposing parties, counsel, court)
         if related_contacts:
@@ -89,12 +115,12 @@ class FirmReport(ABC):
 
     REPORT_TYPE = "firm_base"
 
-    def __init__(self, firm_data, user_id, options=None):
+    def __init__(self, firm_data, user_id, options=None, user_tz=None):
         self.firm_data = firm_data
         self.user_id = user_id
         self.options = options or {}
-        eastern = timezone(timedelta(hours=-4))
-        self.generated_at = datetime.now(eastern).strftime("%B %d, %Y at %I:%M %p")
+        tz = _get_tz(user_tz)
+        self.generated_at = datetime.now(tz).strftime("%B %d, %Y at %I:%M %p")
 
     @abstractmethod
     def _get_template(self):

@@ -102,6 +102,7 @@ def generate_report():
         related_contacts=related_contacts,
         bills=bills,
         activities=activities,
+        user_tz=user.timezone,
     )
     record = report.generate()
 
@@ -170,6 +171,7 @@ def generate_batch_reports():
                 related_contacts=related_contacts,
                 bills=bills,
                 activities=activities,
+                user_tz=user.timezone,
             )
             record = report.generate()
             reports.append({
@@ -218,7 +220,7 @@ def generate_firm_report():
             return jsonify({"error": f"Failed to fetch matters: {str(e)}"}), 502
 
         trust_data = TrustManagementData(matters_data)
-        report = TrustManagementReport(trust_data, user.id, options=options)
+        report = TrustManagementReport(trust_data, user.id, options=options, user_tz=user.timezone)
         record = report.generate()
 
         return jsonify({
@@ -259,7 +261,7 @@ def generate_firm_report():
             start_date, end_date, bills_data, mode=mode,
             practice_area_lookup=pa_lookup,
         )
-        report = RevenueByPracticeAreaReport(rev_data, user.id, options=options)
+        report = RevenueByPracticeAreaReport(rev_data, user.id, options=options, user_tz=user.timezone)
         record = report.generate()
     else:
         # Fetch firm-wide data from Clio
@@ -300,7 +302,7 @@ def generate_firm_report():
         if not report_cls:
             return jsonify({"error": f"Unknown report type: {report_type}"}), 400
 
-        report = report_cls(firm_data, user.id, options=options)
+        report = report_cls(firm_data, user.id, options=options, user_tz=user.timezone)
         record = report.generate()
 
     return jsonify({
