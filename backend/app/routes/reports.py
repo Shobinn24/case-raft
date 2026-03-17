@@ -26,6 +26,24 @@ def _require_subscription(user):
     return None
 
 
+# Tiers that include analytics / trust management features
+_ANALYTICS_TIERS = {"team", "firm"}
+
+
+def _require_tier(user, allowed_tiers, feature_name="This feature"):
+    """Ensure the user's plan tier is in the allowed set."""
+    sub_err = _require_subscription(user)
+    if sub_err:
+        return sub_err
+    if user.effective_plan_tier not in allowed_tiers:
+        return jsonify({
+            "error": "Plan upgrade required",
+            "message": f"{feature_name} requires a Team or Firm plan.",
+            "upgrade": True,
+        }), 403
+    return None
+
+
 def _get_clio_client():
     """Build a ClioAPIClient from the current session user."""
     user_id = session.get("user_id")
@@ -214,6 +232,9 @@ def generate_firm_report():
 
     # Trust Management Report — snapshot of current trust balances (no date range)
     if report_type == "trust_management":
+        tier_err = _require_tier(user, _ANALYTICS_TIERS, "Trust Management Report")
+        if tier_err:
+            return tier_err
         try:
             matters_data = clio.get_matters_with_trust_data()
         except Exception as e:

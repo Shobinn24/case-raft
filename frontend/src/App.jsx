@@ -55,8 +55,12 @@ function App() {
             <>
               <NavLink to="/cases">Cases</NavLink>
               <NavLink to="/firm-reports">Firm Reports</NavLink>
-              <NavLink to="/revenue-report">Revenue Report</NavLink>
-              <NavLink to="/trust-report">Trust Report</NavLink>
+              {["team", "firm"].includes(auth.user.plan_tier) && (
+                <NavLink to="/revenue-report">Revenue Report</NavLink>
+              )}
+              {["team", "firm"].includes(auth.user.plan_tier) && (
+                <NavLink to="/trust-report">Trust Report</NavLink>
+              )}
               <NavLink to="/history">History</NavLink>
             </>
           )}
@@ -90,8 +94,16 @@ function App() {
               <Route path="/cases" element={<Cases />} />
               <Route path="/cases/:caseId" element={<CaseDetail />} />
               <Route path="/firm-reports" element={<FirmProductivity />} />
-              <Route path="/revenue-report" element={<RevenueReport />} />
-              <Route path="/trust-report" element={<TrustReport />} />
+              {["team", "firm"].includes(auth.user.plan_tier) ? (
+                <Route path="/revenue-report" element={<RevenueReport />} />
+              ) : (
+                <Route path="/revenue-report" element={<Navigate to="/pricing" replace />} />
+              )}
+              {["team", "firm"].includes(auth.user.plan_tier) ? (
+                <Route path="/trust-report" element={<TrustReport />} />
+              ) : (
+                <Route path="/trust-report" element={<Navigate to="/pricing" replace />} />
+              )}
               <Route path="/history" element={<History />} />
               <Route path="/pricing" element={<Pricing user={auth.user} />} />
               <Route path="/compare" element={<ComparePlans user={auth.user} />} />
