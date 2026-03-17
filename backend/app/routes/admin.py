@@ -141,46 +141,69 @@ def clio_fields_debug():
 
     results = {}
 
-    # Try fetching a single matter with trust-related fields
+    # Try account_balances with explicit sub-fields (was "redacted" without them)
     try:
         resp = clio._request("GET", "matters.json", params={
-            "fields": "id,display_number,description,status,"
+            "fields": "id,display_number,status,"
                       "client{id,name},"
-                      "account_balances,"
+                      "account_balances{id,balance,type,name},"
                       "evergreen_retainer,"
                       "custom_field_values{id,field_name,value}",
             "status": "open",
             "limit": 5,
             "order": "id(asc)",
         })
-        results["matters_with_trust_fields"] = resp.get("data", [])
+        results["matters_v1_with_subfields"] = resp.get("data", [])
     except Exception as e:
-        results["matters_error"] = str(e)
+        results["matters_v1_error"] = str(e)
 
-    # Try fetching bank accounts to see trust account structure
+    # Try without sub-fields on account_balances but with
+    # matter_budget and contingency_fee (other billing fields)
+    try:
+        resp = clio._request("GET", "matters.json", params={
+            "fields": "id,display_number,status,"
+                      "account_balances,"
+                      "matter_budget,"
+                      "contingency_fee",
+            "status": "open",
+            "limit": 2,
+            "order": "id(asc)",
+        })
+        results["matters_v2_other_billing"] = resp.get("data", [])
+    except Exception as e:
+        results["matters_v2_error"] = str(e)
+
+    # Try bank_accounts with corrected fields
     try:
         resp = clio._request("GET", "bank_accounts.json", params={
-            "fields": "id,name,type,balance,currency,account_type,"
-                      "clio_payments_enabled,domicile,holder",
+            "fields": "id,name,type,balance,currency,"
+                      "clio_payments_enabled",
             "limit": 10,
         })
         results["bank_accounts"] = resp.get("data", [])
     except Exception as e:
         results["bank_accounts_error"] = str(e)
 
-    # Try trust_line_items endpoint
+    # Try trust_line_items with corrected fields
     try:
         resp = clio._request("GET", "trust_line_items.json", params={
-            "fields": "id,date,type,total,note,"
-                      "matter{id,display_number},"
-                      "contact{id,name},"
-                      "bank_account{id,name}",
+            "fields": "id,date,total,note,"
+                      "matter{id,display_number}",
             "limit": 5,
             "order": "date(desc)",
         })
         results["trust_line_items"] = resp.get("data", [])
     except Exception as e:
         results["trust_line_items_error"] = str(e)
+
+    # Try outstanding_client_balances endpoint
+    try:
+        resp = clio._request("GET", "outstanding_client_balances.json", params={
+            "limit": 5,
+        })
+        results["outstanding_client_balances"] = resp.get("data", [])
+    except Exception as e:
+        results["outstanding_client_balances_error"] = str(e)
 
     return jsonify(results)
 
