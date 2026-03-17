@@ -388,10 +388,13 @@ class TrustManagementData:
     Identifies clients/matters whose trust balances are below the required
     threshold. Two scenarios:
     - Non-TCP (Trust Commitment Program disabled): threshold = initial trust deposit
-    - TCP (Trust Commitment Program enabled): threshold = Clio min trust threshold
+    - TCP (Trust Commitment Program enabled): threshold = Clio evergreen retainer min
 
-    The exact Clio API field names for trust balances / thresholds may need
-    adjustment after running the /admin/clio-fields-debug endpoint.
+    Clio API field structures (confirmed via debug endpoint):
+    - account_balances: list of dicts with keys {id, balance, currency_id, name, type}
+      where type is "Operating" or "Trust"
+    - evergreen_retainer: dict or numeric — the trust notification threshold
+    - custom_field_values: list of dicts with {id, field_name, value}
     """
 
     # Custom field names in Clio (case-insensitive matching)
@@ -435,13 +438,14 @@ class TrustManagementData:
                         initial_deposit = None
 
             # --- Extract trust balance ---
-            # account_balances may be a dict or list — adjust after discovery
-            account_balances = matter.get("account_balances") or {}
+            # account_balances is a list of dicts: [{id, balance, name, type, currency_id}]
+            # type is "Operating" or "Trust" — we want the "Trust" entry
+            account_balances = matter.get("account_balances") or []
             trust_balance = self._extract_trust_balance(account_balances)
 
             # --- Extract min threshold (Clio billing preference) ---
-            # evergreen_retainer may contain the trust notification threshold
-            evergreen = matter.get("evergreen_retainer") or {}
+            # evergreen_retainer: the "Notify when trust funds are below $X" value
+            evergreen = matter.get("evergreen_retainer")
             min_threshold_clio = self._extract_min_threshold(evergreen)
 
             # --- Determine threshold based on TCP status ---
@@ -480,37 +484,29 @@ class TrustManagementData:
         self.rows.sort(key=lambda r: r["amount_below"], reverse=True)
 
     def _extract_trust_balance(self, account_balances):
-        """Extract the trust account balance from the account_balances field.
+        """Extract the trust account balance from the account_balances list.
 
-        The exact structure depends on Clio's API response.
-        Common patterns we'll try:
-        - account_balances as list of dicts with type/balance fields
-        - account_balances as dict with trust_balance key
-        - account_balances as list with balance sub-objects
+        Confirmed Clio structure:
+        [{"id": 123, "balance": 0, "currency_id": null, "name": "1234567", "type": "Operating"}]
+        We look for type == "Trust".
         """
         if not account_balances:
             return None
 
-        # If it's a list, look for a trust-type entry
         if isinstance(account_balances, list):
             for acct in account_balances:
-                acct_type = (acct.get("type") or acct.get("account_type") or "").lower()
-                if "trust" in acct_type:
-                    return self._parse_amount(acct.get("balance") or acct.get("amount"))
-            # If only one account, assume it's trust
-            if len(account_balances) == 1:
-                return self._parse_amount(
-                    account_balances[0].get("balance") or account_balances[0].get("amount")
-                )
+                if isinstance(acct, dict) and acct.get("redacted"):
+                    continue  # Skip redacted entries
+                acct_type = (acct.get("type") or "").lower()
+                if acct_type == "trust":
+                    return self._parse_amount(acct.get("balance"))
+            # No trust-type account found on this matter
+            return None
 
-        # If it's a dict, try common field names
+        # Fallback: if it's somehow a dict (shouldn't be based on discovery)
         if isinstance(account_balances, dict):
-            for key in ("trust_balance", "trust", "balance"):
-                if key in account_balances:
-                    return self._parse_amount(account_balances[key])
-            # Maybe it's a flat dict with an amount
-            if "amount" in account_balances:
-                return self._parse_amount(account_balances["amount"])
+            if account_balances.get("type", "").lower() == "trust":
+                return self._parse_amount(account_balances.get("balance"))
 
         return None
 
@@ -518,20 +514,30 @@ class TrustManagementData:
         """Extract the minimum trust threshold from evergreen_retainer.
 
         This is Clio's "Notify when trust funds are below $X" value.
+        The exact format may be:
+        - A numeric value directly
+        - A dict with amount/threshold/minimum fields
+        - None if not configured
         """
-        if not evergreen:
+        if evergreen is None:
             return None
 
+        # If it's already a number, return it directly
+        if isinstance(evergreen, (int, float)):
+            return float(evergreen)
+
+        # If it's a dict, try known field names
         if isinstance(evergreen, dict):
-            # Try common field names
             for key in ("minimum_balance", "minimum_trust_balance",
                         "min_balance", "threshold", "amount",
-                        "minimum_amount", "notification_threshold"):
+                        "minimum_amount", "notification_threshold",
+                        "balance", "value"):
                 if key in evergreen:
                     return self._parse_amount(evergreen[key])
-            # If the evergreen dict itself has a numeric value we can use
-            if "balance" in evergreen:
-                return self._parse_amount(evergreen["balance"])
+
+        # If it's a string that looks like a number
+        if isinstance(evergreen, str):
+            return self._parse_amount(evergreen)
 
         return None
 
