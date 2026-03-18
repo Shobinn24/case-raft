@@ -13,6 +13,8 @@ import Contact from "./pages/Contact";
 import RevenueReport from "./pages/RevenueReport";
 import TrustReport from "./pages/TrustReport";
 import Admin from "./pages/Admin";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import logo from "./assets/caseraftlogo.jpg";
 
 function App() {
@@ -38,7 +40,13 @@ function App() {
   }
 
   if (!auth.user) {
-    return <Login />;
+    return (
+      <Routes>
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="*" element={<Login />} />
+      </Routes>
+    );
   }
 
   // If user has no active subscription, show pricing page
@@ -87,6 +95,8 @@ function App() {
               <Route path="/compare" element={<ComparePlans user={auth.user} />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/billing" element={<Billing user={auth.user} onRefreshAuth={refreshAuth} />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="*" element={<Navigate to="/pricing" replace />} />
             </>
           ) : (
@@ -109,6 +119,8 @@ function App() {
               <Route path="/compare" element={<ComparePlans user={auth.user} />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/billing" element={<Billing user={auth.user} onRefreshAuth={refreshAuth} />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
               {auth.user.is_admin && (
                 <Route path="/admin" element={<Admin />} />
               )}

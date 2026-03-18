@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { getLoginUrl, submitContact } from "../services/api";
 import logo from "../assets/caseraftlogo.jpg";
 
@@ -355,10 +356,19 @@ export default function Login() {
               <span>Clio Manage</span>
               <span>PDF Export</span>
             </div>
+            <div className="footer-col">
+              <h4>Legal</h4>
+              <Link to="/privacy-policy">Privacy Policy</Link>
+              <Link to="/terms-of-service">Terms of Service</Link>
+            </div>
           </div>
           <div className="footer-bottom">
             <p>&copy; {new Date().getFullYear()} Case Raft. All rights reserved.</p>
-            <p className="footer-tagline">Professional case reports, built by operators.</p>
+            <div className="footer-bottom-links">
+              <Link to="/privacy-policy">Privacy Policy</Link>
+              <span className="footer-divider">|</span>
+              <Link to="/terms-of-service">Terms of Service</Link>
+            </div>
           </div>
         </div>
       </footer>
