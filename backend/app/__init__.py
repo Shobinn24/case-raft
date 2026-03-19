@@ -49,12 +49,19 @@ def create_app():
     # Extensions
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app, supports_credentials=True, origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
+
+    # Only allow dev origins in development
+    allowed_origins = [
         "https://caseraft.com",
+        "https://www.caseraft.com",
         "https://web-production-f49df.up.railway.app",
-    ])
+    ]
+    if app.debug or os.environ.get("FLASK_ENV") == "development":
+        allowed_origins += [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    CORS(app, supports_credentials=True, origins=allowed_origins)
 
     # Blueprints
     from app.routes.auth import auth_bp
@@ -70,6 +77,17 @@ def create_app():
     app.register_blueprint(billing_bp, url_prefix="/billing")
     app.register_blueprint(contact_bp, url_prefix="/api")
     app.register_blueprint(admin_bp, url_prefix="/admin")
+
+    # ---- Security headers ----
+    @app.after_request
+    def set_security_headers(response):
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        return response
 
     # ---- Error logging middleware ----
 
