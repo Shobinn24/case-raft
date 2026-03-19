@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getCase, generateReport, getReportDownloadUrl } from "../services/api";
+import SEO from "../components/SEO";
 
 export default function CaseDetail() {
   const { caseId } = useParams();
@@ -36,7 +37,8 @@ export default function CaseDetail() {
   const c = caseData;
 
   return (
-    <div>
+    <section>
+      <SEO title={c.display_number ? `Case ${c.display_number}` : "Case Detail"} path={`/cases/${caseId}`} />
       <Link to="/cases" className="back-link">&larr; Back to Cases</Link>
 
       <div className="detail-header">
@@ -125,6 +127,6 @@ export default function CaseDetail() {
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

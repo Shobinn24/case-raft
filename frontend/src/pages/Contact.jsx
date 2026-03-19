@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { submitContact } from "../services/api";
+import SEO from "../components/SEO";
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", firm_name: "", message: "" });
@@ -27,6 +28,7 @@ export default function Contact() {
 
   return (
     <div className="contact-page">
+      <SEO title="Contact Us" description="Get in touch with the Case Raft team. Questions about Clio reporting or need help choosing a plan?" path="/contact" />
       <div className="contact-page-inner">
         <div className="contact-info">
           <h1>Get in Touch</h1>

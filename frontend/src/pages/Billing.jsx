@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getSubscription, createPortal } from "../services/api";
+import SEO from "../components/SEO";
 
 const TIER_LABELS = { free: "Free", solo: "Solo", team: "Team", firm: "Firm" };
 const STATUS_LABELS = {
@@ -43,6 +44,7 @@ export default function Billing({ user, onRefreshAuth }) {
 
   return (
     <div className="billing-page">
+      <SEO title="Billing" description="Manage your Case Raft subscription and billing." path="/billing" />
       <h1>Billing & Subscription</h1>
 
       {justSubscribed && (

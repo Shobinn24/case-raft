@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { generateFirmReport, getReportDownloadUrl } from "../services/api";
+import SEO from "../components/SEO";
 
 export default function TrustReport() {
   const [generating, setGenerating] = useState(false);
@@ -30,7 +31,8 @@ export default function TrustReport() {
   };
 
   return (
-    <div>
+    <section>
+      <SEO title="Trust Management Report" description="Trust account balances and management overview." path="/trust-report" />
       <h2>Trust Management Report</h2>
       <p className="page-subtitle">
         Generate a report showing clients whose trust account balances are below
@@ -83,6 +85,6 @@ export default function TrustReport() {
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

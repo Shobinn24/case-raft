@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
+import SEO from "../components/SEO";
 
 export default function PrivacyPolicy() {
   return (
     <div className="legal-page">
+      <SEO title="Privacy Policy" description="Case Raft privacy policy. Learn how we handle your data when using our Clio reporting tool." path="/privacy-policy" />
       <div className="legal-container">
         <Link to="/" className="legal-back">&larr; Back to Home</Link>
 

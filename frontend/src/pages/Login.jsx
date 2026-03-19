@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { getLoginUrl, submitContact } from "../services/api";
+import SEO from "../components/SEO";
 import logo from "../assets/caseraftlogo.jpg";
 
 function LandingContactForm() {
@@ -49,6 +50,7 @@ function LandingContactForm() {
 export default function Login() {
   return (
     <div className="landing">
+      <SEO path="/" />
       {/* ── Navigation ── */}
       <nav className="landing-nav">
         <div className="landing-nav-inner">

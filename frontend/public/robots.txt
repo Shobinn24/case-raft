@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /cases
+Disallow: /cases/
+Disallow: /billing
+Disallow: /admin
+Disallow: /history
+Disallow: /firm-reports
+Disallow: /revenue-report
+Disallow: /trust-report
+
+Sitemap: https://caseraft.com/sitemap.xml

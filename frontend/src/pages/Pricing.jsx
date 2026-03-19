@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getBillingPrices, createCheckout } from "../services/api";
+import SEO from "../components/SEO";
 
 const TIER_ICONS = {
   solo: (
@@ -58,6 +59,7 @@ export default function Pricing({ user }) {
 
   return (
     <div className="pricing-page">
+      <SEO title="Pricing" description="Simple, transparent pricing for Clio reporting. Solo, Team, and Firm plans starting at $29/mo." path="/pricing" />
       <div className="pricing-hero">
         <div className="pricing-hero-inner">
           <div className="pricing-badge">🎉 50% off your first month</div>

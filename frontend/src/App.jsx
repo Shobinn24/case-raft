@@ -15,6 +15,7 @@ import TrustReport from "./pages/TrustReport";
 import Admin from "./pages/Admin";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import NotFound from "./pages/NotFound";
 import logo from "./assets/caseraftlogo.jpg";
 
 function App() {
@@ -42,9 +43,12 @@ function App() {
   if (!auth.user) {
     return (
       <Routes>
+        <Route path="/" element={<Login />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-of-service" element={<TermsOfService />} />
-        <Route path="*" element={<Login />} />
+        <Route path="/pricing" element={<Login />} />
+        <Route path="/contact" element={<Login />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     );
   }

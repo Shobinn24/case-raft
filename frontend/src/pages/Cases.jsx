@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { getCases, generateBatchReports, getReportDownloadUrl } from "../services/api";
+import SEO from "../components/SEO";
 
 const STATUS_TABS = ["all", "open", "pending", "closed"];
 
@@ -73,7 +74,8 @@ export default function Cases() {
   if (error && cases.length === 0) return <div className="error">{error}</div>;
 
   return (
-    <div>
+    <section>
+      <SEO title="Your Cases" description="Browse and manage your Clio cases. Generate court-ready PDF reports." path="/cases" />
       <h2>Your Cases</h2>
 
       {/* Toolbar: Search + Filter */}
@@ -163,6 +165,6 @@ export default function Cases() {
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

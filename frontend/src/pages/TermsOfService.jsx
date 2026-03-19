@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
+import SEO from "../components/SEO";
 
 export default function TermsOfService() {
   return (
     <div className="legal-page">
+      <SEO title="Terms of Service" description="Case Raft terms of service. Read the terms governing use of our Clio reporting platform." path="/terms-of-service" />
       <div className="legal-container">
         <Link to="/" className="legal-back">&larr; Back to Home</Link>
 

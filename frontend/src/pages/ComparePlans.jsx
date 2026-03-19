@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { createCheckout } from "../services/api";
+import SEO from "../components/SEO";
 
 const CHECK = (
   <svg className="compare-icon compare-icon-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -78,6 +79,7 @@ export default function ComparePlans({ user }) {
 
   return (
     <div className="compare-page">
+      <SEO title="Compare Plans" description="Compare Case Raft pricing plans side by side. Solo, Team, and Firm features." path="/compare" />
       <div className="compare-header">
         <Link to="/pricing" className="compare-back">&larr; Back to Pricing</Link>
         <h1>Compare Plans</h1>

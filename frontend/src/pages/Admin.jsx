@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAdminStats, getAdminErrors, getAdminUsers } from "../services/api";
+import SEO from "../components/SEO";
 
 export default function Admin() {
   const [tab, setTab] = useState("errors");
@@ -84,6 +85,7 @@ export default function Admin() {
 
   return (
     <div>
+      <SEO title="Admin" path="/admin" />
       <h2>Admin Dashboard</h2>
 
       {/* Stats header */}

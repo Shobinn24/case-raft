@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getReportHistory, getReportDownloadUrl } from "../services/api";
+import SEO from "../components/SEO";
 
 export default function History() {
   const [reports, setReports] = useState([]);
@@ -14,7 +15,8 @@ export default function History() {
   if (loading) return <div className="loading">Loading history...</div>;
 
   return (
-    <div>
+    <section>
+      <SEO title="Report History" description="View and re-download all previously generated case reports." path="/history" />
       <h2>Report History</h2>
       {reports.length === 0 ? (
         <p className="empty">No reports generated yet.</p>
@@ -49,6 +51,6 @@ export default function History() {
           </tbody>
         </table>
       )}
-    </div>
+    </section>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { generateFirmReport, getReportDownloadUrl } from "../services/api";
+import SEO from "../components/SEO";
 
 export default function RevenueReport() {
   const today = new Date().toISOString().slice(0, 10);
@@ -42,7 +43,8 @@ export default function RevenueReport() {
   };
 
   return (
-    <div>
+    <section>
+      <SEO title="Revenue Report" description="Revenue breakdown by practice area and attorney." path="/revenue-report" />
       <h2>Revenue by Practice Area</h2>
       <p className="page-subtitle">
         Generate a report showing revenue collected or outstanding AR broken
@@ -121,6 +123,6 @@ export default function RevenueReport() {
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { generateFirmReport, exportAccounting, getReportDownloadUrl } from "../services/api";
+import SEO from "../components/SEO";
 
 const DEFAULT_SECTIONS = {
   summary: true,
@@ -91,7 +92,8 @@ export default function FirmProductivity() {
   };
 
   return (
-    <div>
+    <section>
+      <SEO title="Firm Productivity Report" description="Generate firm-wide productivity reports with utilization and realization rates." path="/firm-reports" />
       <h2>Firm Productivity Report</h2>
       <p className="page-subtitle">
         Generate a report showing hours, revenue, utilization, and collection
@@ -176,6 +178,6 @@ export default function FirmProductivity() {
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

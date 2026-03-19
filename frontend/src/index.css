@@ -2389,3 +2389,31 @@ a { text-decoration: none; color: inherit; }
   padding: 40px;
   color: var(--color-text-muted);
 }
+
+/* ─── 404 Page ─── */
+.not-found-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 40px 20px;
+}
+.not-found-page h1 {
+  font-size: 6rem;
+  font-weight: 800;
+  color: var(--color-accent);
+  margin: 0;
+  line-height: 1;
+}
+.not-found-page h2 {
+  font-size: 1.5rem;
+  color: var(--color-text);
+  margin: 8px 0 16px;
+}
+.not-found-page p {
+  color: var(--color-text-muted);
+  margin-bottom: 32px;
+  max-width: 400px;
+}
