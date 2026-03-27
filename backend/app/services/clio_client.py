@@ -18,6 +18,9 @@ class ClioAPIClient:
         self.user_id = user_id
         self.base_url = current_app.config["CLIO_API_URL"]
 
+        from app.services.mock_clio_data import DEV_MOCK_TOKEN
+        self._is_dev = (access_token == DEV_MOCK_TOKEN)
+
     # Refresh 5 minutes early to avoid mid-request expiry during PDF generation
     TOKEN_REFRESH_BUFFER = timedelta(minutes=5)
 
@@ -95,6 +98,9 @@ class ClioAPIClient:
 
     def get_matters(self, status="open", limit=200, page_token=None):
         """GET /matters.json — list matters."""
+        if self._is_dev:
+            from app.services.mock_clio_data import get_mock_matters
+            return get_mock_matters()
         params = {
             "fields": "id,display_number,description,status,open_date,close_date,"
                       "pending_date,client{id,name},practice_area{name},"
@@ -109,6 +115,9 @@ class ClioAPIClient:
 
     def get_matter(self, matter_id):
         """GET /matters/{id}.json — single matter with full details."""
+        if self._is_dev:
+            from app.services.mock_clio_data import get_mock_matter
+            return get_mock_matter(matter_id)
         params = {
             "fields": "id,display_number,description,status,open_date,close_date,"
                       "pending_date,client{id,name,first_name,last_name,type,"
@@ -140,6 +149,9 @@ class ClioAPIClient:
         Each related contact includes a relationship.description that defines
         their role on the matter.
         """
+        if self._is_dev:
+            from app.services.mock_clio_data import get_mock_related_contacts
+            return get_mock_related_contacts(matter_id)
         params = {
             "fields": "id,name,first_name,last_name,type,title,prefix,"
                       "primary_email_address,primary_phone_number,is_matter_client,"
@@ -157,6 +169,9 @@ class ClioAPIClient:
 
     def get_activities(self, matter_id):
         """GET /activities.json — time entries and expenses for a matter."""
+        if self._is_dev:
+            from app.services.mock_clio_data import get_mock_activities
+            return get_mock_activities(matter_id)
         params = {
             "fields": "id,type,date,quantity_in_hours,rounded_quantity_in_hours,"
                       "price,total,note,flat_rate,billed,on_bill,non_billable,"
@@ -172,6 +187,9 @@ class ClioAPIClient:
 
     def get_bills(self, matter_id):
         """GET /bills.json — invoices for a matter."""
+        if self._is_dev:
+            from app.services.mock_clio_data import get_mock_bills
+            return get_mock_bills(matter_id)
         params = {
             "fields": "id,number,issued_at,due_at,state,total,sub_total,"
                       "balance,paid,paid_at,"
@@ -282,6 +300,9 @@ class ClioAPIClient:
         - custom_field_values: for "Trust Commitment Program" and "Initial Trust Deposit"
         - client: contact name for display
         """
+        if self._is_dev:
+            from app.services.mock_clio_data import get_mock_matters_with_trust_data
+            return get_mock_matters_with_trust_data()
         params = {
             "fields": "id,display_number,description,status,"
                       "client{id,name},"

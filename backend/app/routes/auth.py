@@ -134,6 +134,46 @@ def status():
     })
 
 
+@auth_bp.route("/dev-login")
+def dev_login():
+    """Quick login for local development — bypasses Clio OAuth entirely.
+
+    Only available when FLASK_ENV=development. Returns 404 in production.
+    Creates (or reuses) a dev user with dummy Clio tokens so that the
+    mock-data layer in ClioAPIClient kicks in automatically.
+    """
+    if os.environ.get("FLASK_ENV") != "development":
+        return jsonify({"error": "Not found"}), 404
+
+    dev_email = "shobinn24@gmail.com"
+    dummy_token = "dev-mock-token"
+    expires = datetime.utcnow() + timedelta(days=365)
+
+    user = User.query.filter_by(email=dev_email).first()
+    if user:
+        user.clio_access_token = dummy_token
+        user.clio_refresh_token = dummy_token
+        user.token_expires_at = expires
+        user.updated_at = datetime.utcnow()
+    else:
+        user = User(
+            email=dev_email,
+            clio_access_token=dummy_token,
+            clio_refresh_token=dummy_token,
+            token_expires_at=expires,
+            timezone="Eastern Time (US & Canada)",
+        )
+        db.session.add(user)
+
+    db.session.commit()
+    session["user_id"] = user.id
+
+    # In dev, redirect to the Vite frontend origin so the session cookie
+    # stays on the right port and the SPA handles routing.
+    frontend_url = request.args.get("next", "http://localhost:5173/cases")
+    return redirect(frontend_url)
+
+
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     """Clear the session."""

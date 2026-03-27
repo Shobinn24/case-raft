@@ -13,6 +13,7 @@ const api = axios.create({
 export const getAuthStatus = () => api.get("/auth/status");
 export const logout = () => api.post("/auth/logout");
 export const getLoginUrl = () => `${API_BASE}/auth/login`;
+export const getDevLoginUrl = () => `${API_BASE}/auth/dev-login`;
 
 // Cases
 export const getCases = (status) =>

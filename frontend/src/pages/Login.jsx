@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { getLoginUrl, submitContact } from "../services/api";
+import { getLoginUrl, getDevLoginUrl, submitContact } from "../services/api";
 import SEO from "../components/SEO";
 import logo from "../assets/caseraftlogo.jpg";
 
@@ -63,6 +63,11 @@ export default function Login() {
             <a href={getLoginUrl()} className="btn btn-accent btn-small">
               Sign In
             </a>
+            {import.meta.env.DEV && (
+              <a href={getDevLoginUrl()} className="btn btn-small" style={{ marginLeft: 8, border: "1px dashed #888", color: "#888" }}>
+                Dev Login
+              </a>
+            )}
           </div>
         </div>
       </nav>
