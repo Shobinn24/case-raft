@@ -282,8 +282,7 @@ class ClioAPIClient:
             "fields": "id,number,issued_at,due_at,state,total,sub_total,"
                       "balance,paid,paid_at,"
                       "start_at,end_at,subject,type,"
-                      "matters{id,display_number,practice_area},"
-                      "line_items{id,type,total,quantity,price,activity}",
+                      "matters{id,display_number,practice_area}",
             "issued_after": issued_after,
             "issued_before": issued_before,
             "limit": 200,
@@ -306,7 +305,7 @@ class ClioAPIClient:
         params = {
             "fields": "id,display_number,description,status,"
                       "client{id,name},"
-                      "account_balances,"
+                      "account_balances{id,balance,type,name,currency_id},"
                       "evergreen_retainer,"
                       "custom_field_values{id,field_name,value}",
             "status": "open",

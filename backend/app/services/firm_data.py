@@ -87,7 +87,9 @@ class FirmProductivityData:
             }
 
         # Aggregate activities by user
+        # Also build matter_hours: {matter_id: {uid: hours}} for bill attribution
         employees = {}
+        matter_hours = {}  # matter_id -> {uid -> billable hours}
         for activity in activities_data:
             user_info = activity.get("user") or {}
             uid = user_info.get("id")
@@ -113,15 +115,21 @@ class FirmProductivityData:
                 emp.billable_hours += hours
                 emp.total_billed_amount += activity.get("total") or 0
 
+                # Track billable hours per matter for collected revenue attribution
+                matter = activity.get("matter") or {}
+                mid = matter.get("id")
+                if mid:
+                    matter_hours.setdefault(mid, {})
+                    matter_hours[mid][uid] = matter_hours[mid].get(uid, 0) + hours
+
             # Write-off tracking: no_charge activities
             if activity.get("no_charge"):
                 emp.write_off_hours += hours
                 emp.write_off_amount += hours * (emp.rate or 0)
 
-        # Collected revenue: calculated from paid bills' line items.
-        # For each paid bill, look at its line items to find which users
-        # contributed work, then attribute the bill's paid amount
-        # proportionally based on each user's share of line item totals.
+        # Collected revenue: attribute paid bill amounts to employees based on
+        # their share of billable hours on the matters associated with each bill.
+        # (Clio's bills endpoint does not expose line_items directly.)
         for b in bills_data:
             if b.get("state") != "paid":
                 continue
@@ -129,39 +137,28 @@ class FirmProductivityData:
             if bill_paid <= 0:
                 continue
 
-            # Sum line item totals per user on this bill
-            user_totals = {}  # uid -> sum of line item totals
-            line_items = b.get("line_items") or []
-            bill_line_total = 0.0
-            for li in line_items:
-                li_total = li.get("total") or 0
-                activity = li.get("activity") or {}
-                user = activity.get("user") or {}
-                uid = user.get("id")
-                if uid:
-                    user_totals[uid] = user_totals.get(uid, 0) + li_total
-                    bill_line_total += li_total
-
-            if bill_line_total <= 0:
+            matter_ids = {
+                m.get("id")
+                for m in (b.get("matters") or [])
+                if m.get("id")
+            }
+            if not matter_ids:
                 continue
 
-            # Distribute the bill's paid amount proportionally by user share
-            for uid, user_li_total in user_totals.items():
-                share = user_li_total / bill_line_total
-                collected = bill_paid * share
+            # Sum billable hours per user across all matters on this bill
+            user_hours = {}
+            for mid in matter_ids:
+                for uid, hrs in matter_hours.get(mid, {}).items():
+                    user_hours[uid] = user_hours.get(uid, 0) + hrs
+
+            total_hours = sum(user_hours.values())
+            if total_hours <= 0:
+                continue
+
+            for uid, hrs in user_hours.items():
+                share = hrs / total_hours
                 if uid in employees:
-                    employees[uid].collected_revenue += collected
-                else:
-                    # User might not have activities in the date range but
-                    # has collected revenue from a bill issued in the range
-                    u_data = users_by_id.get(uid, {})
-                    emp = EmployeeProductivity(
-                        uid,
-                        user.get("name", u_data.get("name", "Unknown")),
-                        rate=u_data.get("rate"),
-                    )
-                    emp.collected_revenue += collected
-                    employees[uid] = emp
+                    employees[uid].collected_revenue += bill_paid * share
 
         self.employees = sorted(employees.values(), key=lambda e: e.name)
 
