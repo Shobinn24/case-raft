@@ -27,7 +27,7 @@ class User(db.Model):
 
     # Whitelisted domains/emails get free Firm access (no Stripe required)
     WHITELISTED_DOMAINS = {"trustice.us"}
-    WHITELISTED_EMAILS = {"srhoades@trustice.us", "shobinn24@gmail.com"}
+    WHITELISTED_EMAILS = {"srhoades@trustice.us", "shobinn24@gmail.com", "shobinn@eclarx.com"}
 
     # Admin emails get access to the admin dashboard
     ADMIN_EMAILS = {"shobinn24@gmail.com"}
