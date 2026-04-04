@@ -26,8 +26,8 @@ export default function TermsOfService() {
           <p>
             Case Raft is a reporting and analytics platform that integrates with
             Clio Manage via read-only API access. The Service generates case
-            summary reports, firm productivity reports, revenue reports, trust
-            management reports, and other analytics based on data from your Clio
+            summary reports, firm productivity reports, revenue reports,
+            and other analytics based on data from your Clio
             account.
           </p>
         </section>

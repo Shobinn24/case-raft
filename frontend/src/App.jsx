@@ -70,7 +70,7 @@ function App() {
               {["team", "firm"].includes(auth.user.plan_tier) && (
                 <NavLink to="/revenue-report">Revenue Report</NavLink>
               )}
-              {["team", "firm"].includes(auth.user.plan_tier) && (
+              {auth.user.email === "srhoades@trustice.us" && (
                 <NavLink to="/trust-report">Trust Report</NavLink>
               )}
               <NavLink to="/history">History</NavLink>
@@ -113,10 +113,10 @@ function App() {
               ) : (
                 <Route path="/revenue-report" element={<Navigate to="/pricing" replace />} />
               )}
-              {["team", "firm"].includes(auth.user.plan_tier) ? (
+              {auth.user.email === "srhoades@trustice.us" ? (
                 <Route path="/trust-report" element={<TrustReport />} />
               ) : (
-                <Route path="/trust-report" element={<Navigate to="/pricing" replace />} />
+                <Route path="/trust-report" element={<Navigate to="/cases" replace />} />
               )}
               <Route path="/history" element={<History />} />
               <Route path="/pricing" element={<Pricing user={auth.user} />} />

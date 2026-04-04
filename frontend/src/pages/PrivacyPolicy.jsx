@@ -35,7 +35,7 @@ export default function PrivacyPolicy() {
           <p>
             Our integration with Clio Manage requests <strong>read-only</strong>{" "}
             access to your firm's data, including matters, contacts, billing
-            entries, trust account balances, and custom fields. We do not modify,
+            entries, and custom fields. We do not modify,
             create, or delete any data in your Clio account.
           </p>
 

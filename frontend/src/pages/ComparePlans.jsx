@@ -30,8 +30,7 @@ const FEATURES = [
   {
     category: "Analytics",
     items: [
-      { name: "Trust management report", solo: false, team: true, firm: true },
-      { name: "Collected revenue reports", solo: false, team: true, firm: true },
+{ name: "Collected revenue reports", solo: false, team: true, firm: true },
       { name: "Realization & utilization rates", solo: false, team: true, firm: true },
       { name: "Write-off tracking", solo: false, team: true, firm: true },
       { name: "AR aging analysis", solo: false, team: false, firm: true },

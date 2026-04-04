@@ -230,11 +230,11 @@ def generate_firm_report():
     report_type = data.get("report_type", "firm_productivity")
     options = data.get("options", {})
 
-    # Trust Management Report — snapshot of current trust balances (no date range)
+    # Trust Management Report — restricted to whitelisted tester only
+    _TRUST_ALLOWED_EMAILS = {"srhoades@trustice.us"}
     if report_type == "trust_management":
-        tier_err = _require_tier(user, _ANALYTICS_TIERS, "Trust Management Report")
-        if tier_err:
-            return tier_err
+        if user.email.lower() not in _TRUST_ALLOWED_EMAILS:
+            return jsonify({"error": "Trust Management Report is not currently available."}), 403
         try:
             matters_data = clio.get_matters_with_trust_data()
         except Exception as e:
