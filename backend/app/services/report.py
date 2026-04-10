@@ -1,7 +1,8 @@
 import os
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from flask import current_app, render_template_string
 
@@ -9,31 +10,34 @@ from app.extensions import db
 from app.models.report_history import ReportHistory
 from app.services.case import Case
 
-# Mapping of common Clio timezone names to UTC offsets (hours).
-# Clio uses Rails-style timezone names (e.g., "Eastern Time (US & Canada)").
-_TZ_OFFSETS = {
-    "eastern time (us & canada)": -4,
-    "central time (us & canada)": -5,
-    "mountain time (us & canada)": -6,
-    "pacific time (us & canada)": -7,
-    "alaska": -8,
-    "hawaii": -10,
-    "atlantic time (canada)": -3,
-    "arizona": -7,
-    "indiana (east)": -4,
-    "utc": 0,
-    "london": 1,
+# Mapping of common Clio (Rails-style) timezone names to IANA zones.
+# ZoneInfo handles DST transitions automatically.
+_TZ_MAP = {
+    "eastern time (us & canada)": "America/New_York",
+    "central time (us & canada)": "America/Chicago",
+    "mountain time (us & canada)": "America/Denver",
+    "pacific time (us & canada)": "America/Los_Angeles",
+    "alaska": "America/Anchorage",
+    "hawaii": "Pacific/Honolulu",
+    "atlantic time (canada)": "America/Halifax",
+    "arizona": "America/Phoenix",
+    "indiana (east)": "America/Indiana/Indianapolis",
+    "utc": "UTC",
+    "london": "Europe/London",
 }
 
 
 def _get_tz(user_tz_name):
-    """Return a timezone object from a Clio timezone name. Falls back to Eastern."""
+    """Return a ZoneInfo from a Clio timezone name. Falls back to Eastern."""
     if user_tz_name:
-        offset = _TZ_OFFSETS.get(user_tz_name.strip().lower())
-        if offset is not None:
-            return timezone(timedelta(hours=offset))
+        tz_name = _TZ_MAP.get(user_tz_name.strip().lower())
+        if tz_name:
+            try:
+                return ZoneInfo(tz_name)
+            except Exception:
+                pass
     # Default to Eastern if unknown
-    return timezone(timedelta(hours=-4))
+    return ZoneInfo("America/New_York")
 
 
 class Report(ABC):

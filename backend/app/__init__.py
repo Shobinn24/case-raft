@@ -202,14 +202,22 @@ def create_app():
         response.headers["X-Error-Already-Logged"] = "1"
         return response
 
+    # Health check endpoint for Railway / uptime monitoring
+    @app.route("/health")
+    def health_check():
+        return {"status": "ok", "service": "caseraft"}, 200
+
     # Serve React frontend in production
     if os.path.isdir(FRONTEND_DIR):
         @app.route("/", defaults={"path": ""})
         @app.route("/<path:path>")
         def serve_frontend(path):
-            file_path = os.path.join(FRONTEND_DIR, path)
-            if path and os.path.isfile(file_path):
-                return send_from_directory(FRONTEND_DIR, path)
+            # send_from_directory has built-in safe_join — no manual path handling
+            if path:
+                try:
+                    return send_from_directory(FRONTEND_DIR, path)
+                except Exception:
+                    pass
             return send_from_directory(FRONTEND_DIR, "index.html")
 
     return app

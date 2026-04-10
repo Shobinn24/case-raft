@@ -294,3 +294,38 @@ def get_mock_bills(matter_id):
             },
         ]
     }
+
+
+def get_mock_contact(contact_id):
+    """Stub contact for the dev mock layer. Matches the shape returned by
+    ClioAPIClient.get_contact so any code path that expects a contact dict
+    can be exercised against the mock.
+    """
+    return {
+        "data": {
+            "id": contact_id,
+            "name": "Mock Contact",
+            "first_name": "Mock",
+            "middle_name": None,
+            "last_name": "Contact",
+            "type": "Person",
+            "title": None,
+            "prefix": None,
+            "date_of_birth": None,
+            "primary_email_address": "mock.contact@example.com",
+            "secondary_email_address": None,
+            "primary_phone_number": "+1-555-555-0100",
+            "secondary_phone_number": None,
+            "addresses": [],
+            "email_addresses": [
+                {"address": "mock.contact@example.com", "name": "Work"}
+            ],
+            "phone_numbers": [
+                {"number": "+1-555-555-0100", "name": "Work"}
+            ],
+            "company": None,
+            "is_client": False,
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z",
+        }
+    }

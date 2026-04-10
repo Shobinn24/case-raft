@@ -147,6 +147,9 @@ class ClioAPIClient:
 
     def get_contact(self, contact_id):
         """GET /contacts/{id}.json — single contact with details."""
+        if self._is_dev:
+            from app.services.mock_clio_data import get_mock_contact
+            return get_mock_contact(contact_id)
         params = {
             "fields": "id,name,first_name,middle_name,last_name,type,title,prefix,"
                       "date_of_birth,primary_email_address,secondary_email_address,"

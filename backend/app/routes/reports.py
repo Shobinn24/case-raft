@@ -7,13 +7,12 @@ from flask import Blueprint, Response, jsonify, request, send_file, session, cur
 
 from app.extensions import limiter
 from app.models.report_history import ReportHistory
-from app.models.user import User
-from app.services.clio_client import ClioAPIClient
 from app.services.firm_data import FirmProductivityData, RevenueByPracticeAreaData, TrustManagementData
 from app.services.report import (
     CaseSummaryReport, FirmProductivityReport,
     RevenueByPracticeAreaReport, TrustManagementReport,
 )
+from app.utils.auth import get_clio_client as _get_clio_client  # backwards-compat alias
 
 reports_bp = Blueprint("reports", __name__)
 
@@ -61,23 +60,6 @@ def _validate_date_range(start_date, end_date):
     if (end - start).days > 730:
         return jsonify({"error": "Date range cannot exceed 2 years"}), 400
     return None
-
-
-def _get_clio_client():
-    """Build a ClioAPIClient from the current session user."""
-    user_id = session.get("user_id")
-    if not user_id:
-        return None, None
-    user = User.query.get(user_id)
-    if not user:
-        return None, None
-    client = ClioAPIClient(
-        access_token=user.clio_access_token,
-        refresh_token=user.clio_refresh_token,
-        token_expires_at=user.token_expires_at,
-        user_id=user.id,
-    )
-    return client, user
 
 
 @reports_bp.route("/reports/generate", methods=["POST"])
