@@ -1,7 +1,7 @@
 import requests as http_requests
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.contact_message import ContactMessage
 
 contact_bp = Blueprint("contact", __name__)
@@ -10,6 +10,7 @@ FORMSPREE_URL = "https://formspree.io/f/xkoqrpjn"
 
 
 @contact_bp.route("/contact", methods=["POST"])
+@limiter.limit("5 per minute")
 def submit_contact():
     """Handle contact form submissions — store in DB and forward to Formspree."""
     data = request.get_json()

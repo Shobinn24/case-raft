@@ -7,7 +7,7 @@ from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import Config
-from app.extensions import db, migrate
+from app.extensions import db, migrate, limiter
 
 # Path to the built React frontend
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")
@@ -49,13 +49,20 @@ def create_app():
     # Extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    limiter.init_app(app)
 
-    # Only allow dev origins in development
-    allowed_origins = [
+    # CORS origins — env var overrides hardcoded defaults
+    default_origins = [
         "https://caseraft.com",
         "https://www.caseraft.com",
         "https://web-production-f49df.up.railway.app",
     ]
+    env_origins = os.environ.get("CORS_ORIGINS", "")
+    allowed_origins = (
+        [o.strip() for o in env_origins.split(",") if o.strip()]
+        if env_origins
+        else default_origins
+    )
     if app.debug or os.environ.get("FLASK_ENV") == "development":
         allowed_origins += [
             "http://localhost:5173",

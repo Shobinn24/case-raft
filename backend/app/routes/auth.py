@@ -6,7 +6,7 @@ import requests
 from flask import Blueprint, current_app, redirect, request, session, jsonify
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.models.user import User
 from app.services.clio_client import ClioAPIClient, HTTP_TIMEOUT
 
@@ -18,6 +18,7 @@ def _get_serializer():
 
 
 @auth_bp.route("/login")
+@limiter.limit("10 per minute")
 def login():
     """Redirect the user to Clio's OAuth authorization page."""
     # Generate a per-user nonce, store in session, and embed in a signed
@@ -116,7 +117,9 @@ def callback():
 
     db.session.commit()
 
-    # Store user ID in session
+    # Store user ID in session and mark it permanent so the
+    # PERMANENT_SESSION_LIFETIME (7 days) takes effect.
+    session.permanent = True
     session["user_id"] = user.id
 
     # Redirect back to the same origin so the session cookie is on the right domain
@@ -190,6 +193,7 @@ def dev_login():
         db.session.add(user)
 
     db.session.commit()
+    session.permanent = True
     session["user_id"] = user.id
 
     # In dev, redirect to the Vite frontend origin so the session cookie

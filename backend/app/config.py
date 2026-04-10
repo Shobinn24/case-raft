@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 
 _env = os.environ.get("FLASK_ENV", "production")
@@ -21,6 +22,8 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = os.environ.get("FLASK_ENV") != "development"
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    SESSION_REFRESH_EACH_REQUEST = True
 
     # Clio OAuth
     CLIO_CLIENT_ID = os.environ.get("CLIO_CLIENT_ID")

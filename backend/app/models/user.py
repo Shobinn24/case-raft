@@ -1,6 +1,20 @@
+import os
 from datetime import datetime
 
 from app.extensions import db
+
+
+def _env_set(name, default):
+    """Parse a comma-separated env var into a lowercased set. Falls back to default."""
+    raw = os.environ.get(name, default)
+    return {item.strip().lower() for item in raw.split(",") if item.strip()}
+
+
+# Defaults preserved from the previous hardcoded lists so behavior doesn't
+# change unless the env var is explicitly set.
+_DEFAULT_WHITELISTED_DOMAINS = "trustice.us"
+_DEFAULT_WHITELISTED_EMAILS = "srhoades@trustice.us,shobinn24@gmail.com,shobinn@eclarx.com"
+_DEFAULT_ADMIN_EMAILS = "shobinn24@gmail.com"
 
 
 class User(db.Model):
@@ -25,12 +39,12 @@ class User(db.Model):
 
     reports = db.relationship("ReportHistory", backref="user", lazy=True)
 
-    # Whitelisted domains/emails get free Firm access (no Stripe required)
-    WHITELISTED_DOMAINS = {"trustice.us"}
-    WHITELISTED_EMAILS = {"srhoades@trustice.us", "shobinn24@gmail.com", "shobinn@eclarx.com"}
+    # Whitelisted domains/emails — env var overrides the default list
+    WHITELISTED_DOMAINS = _env_set("WHITELISTED_DOMAINS", _DEFAULT_WHITELISTED_DOMAINS)
+    WHITELISTED_EMAILS = _env_set("WHITELISTED_EMAILS", _DEFAULT_WHITELISTED_EMAILS)
 
     # Admin emails get access to the admin dashboard
-    ADMIN_EMAILS = {"shobinn24@gmail.com"}
+    ADMIN_EMAILS = _env_set("ADMIN_EMAILS", _DEFAULT_ADMIN_EMAILS)
 
     @property
     def check_is_admin(self):

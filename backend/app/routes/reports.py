@@ -5,6 +5,7 @@ from datetime import date as date_type
 
 from flask import Blueprint, Response, jsonify, request, send_file, session, current_app
 
+from app.extensions import limiter
 from app.models.report_history import ReportHistory
 from app.models.user import User
 from app.services.clio_client import ClioAPIClient
@@ -161,6 +162,7 @@ def generate_report():
 
 
 @reports_bp.route("/reports/generate-batch", methods=["POST"])
+@limiter.limit("3 per minute")
 def generate_batch_reports():
     """Generate PDF reports for multiple cases at once."""
     clio, user = _get_clio_client()
