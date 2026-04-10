@@ -133,10 +133,21 @@ def handle_payment_failed(invoice_data):
 
 
 def _price_to_tier(price_id):
-    """Map a Stripe price ID to our internal tier name."""
+    """Map a Stripe price ID to our internal tier name.
+
+    Returns "free" (not "solo") for unknown price IDs so a misconfigured
+    Stripe dashboard can never silently grant paid access.
+    """
     price_map = {
         current_app.config["STRIPE_PRICE_SOLO"]: "solo",
         current_app.config["STRIPE_PRICE_TEAM"]: "team",
         current_app.config["STRIPE_PRICE_FIRM"]: "firm",
     }
-    return price_map.get(price_id, "solo")
+    tier = price_map.get(price_id)
+    if not tier:
+        current_app.logger.error(
+            f"Unknown Stripe price ID: {price_id}. "
+            f"Expected one of: {list(price_map.keys())}"
+        )
+        return "free"  # Safe default — don't silently grant access
+    return tier

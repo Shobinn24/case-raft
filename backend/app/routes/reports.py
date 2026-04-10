@@ -1,6 +1,7 @@
 import csv
 import io
 import os
+from datetime import date as date_type
 
 from flask import Blueprint, Response, jsonify, request, send_file, session, current_app
 
@@ -41,6 +42,23 @@ def _require_tier(user, allowed_tiers, feature_name="This feature"):
             "message": f"{feature_name} requires a Team or Firm plan.",
             "upgrade": True,
         }), 403
+    return None
+
+
+def _validate_date_range(start_date, end_date):
+    """Return a (jsonify response, status) tuple if invalid, else None."""
+    if not start_date or not end_date:
+        return jsonify({"error": "start_date and end_date are required"}), 400
+    try:
+        start = date_type.fromisoformat(start_date)
+        end = date_type.fromisoformat(end_date)
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+    if end < start:
+        return jsonify({"error": "end_date must be on or after start_date"}), 400
+    # Sanity cap — prevent fetching decades of data in one request
+    if (end - start).days > 730:
+        return jsonify({"error": "Date range cannot exceed 2 years"}), 400
     return None
 
 
@@ -276,8 +294,9 @@ def generate_firm_report():
     start_date = data.get("start_date")
     end_date = data.get("end_date")
 
-    if not start_date or not end_date:
-        return jsonify({"error": "start_date and end_date are required"}), 400
+    date_error = _validate_date_range(start_date, end_date)
+    if date_error:
+        return date_error
 
     # Revenue by Practice Area only needs bills + practice area names
     if report_type == "revenue_by_practice_area":
@@ -432,8 +451,9 @@ def export_accounting():
     end_date = data.get("end_date")
     export_format = data.get("format", "quickbooks")
 
-    if not start_date or not end_date:
-        return jsonify({"error": "start_date and end_date are required"}), 400
+    date_error = _validate_date_range(start_date, end_date)
+    if date_error:
+        return date_error
 
     try:
         bills_data = clio.get_all_bills(start_date, end_date)

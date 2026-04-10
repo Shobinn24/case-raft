@@ -2,6 +2,7 @@ import stripe
 from flask import Blueprint, current_app, jsonify, request, session
 
 from app.extensions import db
+from app.models.stripe_webhook_event import StripeWebhookEvent
 from app.models.user import User
 from app.services.stripe_service import (
     create_checkout_session,
@@ -154,15 +155,30 @@ def webhook():
         return jsonify({"error": "Invalid signature"}), 400
 
     event_type = event["type"]
+    event_id = event["id"]
     data = event["data"]["object"]
 
-    if event_type == "checkout.session.completed":
-        handle_checkout_completed(data)
-    elif event_type == "customer.subscription.updated":
-        handle_subscription_updated(data)
-    elif event_type == "customer.subscription.deleted":
-        handle_subscription_deleted(data)
-    elif event_type == "invoice.payment_failed":
-        handle_payment_failed(data)
+    # Idempotency — Stripe guarantees at-least-once delivery, so we must
+    # short-circuit duplicate deliveries before re-applying side effects.
+    if StripeWebhookEvent.query.get(event_id):
+        return jsonify({"status": "already_processed"}), 200
+
+    try:
+        if event_type == "checkout.session.completed":
+            handle_checkout_completed(data)
+        elif event_type == "customer.subscription.updated":
+            handle_subscription_updated(data)
+        elif event_type == "customer.subscription.deleted":
+            handle_subscription_deleted(data)
+        elif event_type == "invoice.payment_failed":
+            handle_payment_failed(data)
+
+        # Record the event only after successful processing so a failed
+        # handler gets retried by Stripe instead of being silently skipped.
+        db.session.add(StripeWebhookEvent(id=event_id, event_type=event_type))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
 
     return jsonify({"status": "ok"}), 200
