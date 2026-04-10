@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import datetime, timedelta
 
 import requests
@@ -7,7 +8,7 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from app.extensions import db
 from app.models.user import User
-from app.services.clio_client import ClioAPIClient
+from app.services.clio_client import ClioAPIClient, HTTP_TIMEOUT
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -19,9 +20,14 @@ def _get_serializer():
 @auth_bp.route("/login")
 def login():
     """Redirect the user to Clio's OAuth authorization page."""
-    # Use a signed state token instead of session (avoids cookie issues with proxies)
+    # Generate a per-user nonce, store in session, and embed in a signed
+    # state token. The callback verifies the signature AND that the nonce
+    # matches what's in the session — preventing login CSRF / state reuse.
+    nonce = secrets.token_urlsafe(32)
+    session["oauth_nonce"] = nonce
+
     s = _get_serializer()
-    state = s.dumps("oauth-state")
+    state = s.dumps({"nonce": nonce})
 
     from urllib.parse import urlencode
 
@@ -39,13 +45,19 @@ def login():
 @auth_bp.route("/callback")
 def callback():
     """Handle the OAuth callback from Clio."""
-    # Validate signed state token (valid for 5 minutes)
+    # Validate signed state token (valid for 5 minutes) AND bind it to the
+    # session nonce stored at /login time.
     state = request.args.get("state")
     s = _get_serializer()
     try:
-        s.loads(state, max_age=300)
+        state_data = s.loads(state, max_age=300)
     except (BadSignature, SignatureExpired):
         return jsonify({"error": "Invalid or expired state parameter"}), 400
+
+    expected_nonce = session.pop("oauth_nonce", None)
+    received_nonce = state_data.get("nonce") if isinstance(state_data, dict) else None
+    if not expected_nonce or not received_nonce or expected_nonce != received_nonce:
+        return jsonify({"error": "State nonce mismatch"}), 400
 
     # Check for error (user declined)
     error = request.args.get("error")
@@ -67,6 +79,7 @@ def callback():
             "redirect_uri": current_app.config["CLIO_REDIRECT_URI"],
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=HTTP_TIMEOUT,
     )
 
     if token_resp.status_code != 200:
@@ -138,11 +151,22 @@ def status():
 def dev_login():
     """Quick login for local development — bypasses Clio OAuth entirely.
 
-    Only available when FLASK_ENV=development. Returns 404 in production.
+    Hard-blocked in production via multiple guards (defense in depth):
+    1. Flask debug must be on
+    2. FLASK_ENV must be "development"
+    3. If DEV_LOGIN_KEY is configured, ?key= must match
+
     Creates (or reuses) a dev user with dummy Clio tokens so that the
     mock-data layer in ClioAPIClient kicks in automatically.
     """
+    # Hard block in production — multiple guards for defense in depth
+    if not current_app.debug:
+        return jsonify({"error": "Not found"}), 404
     if os.environ.get("FLASK_ENV") != "development":
+        return jsonify({"error": "Not found"}), 404
+    # Require shared secret if configured
+    dev_key = os.environ.get("DEV_LOGIN_KEY")
+    if dev_key and request.args.get("key") != dev_key:
         return jsonify({"error": "Not found"}), 404
 
     dev_email = "shobinn24@gmail.com"

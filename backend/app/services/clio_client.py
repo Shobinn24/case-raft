@@ -8,6 +8,9 @@ from flask import current_app
 from app.extensions import db
 
 
+HTTP_TIMEOUT = (10, 30)  # (connect, read) seconds
+
+
 class ClioAPIClient:
     """Wraps all Clio Manage API v4 interactions. Handles auth headers and token refresh."""
 
@@ -40,6 +43,7 @@ class ClioAPIClient:
                 "refresh_token": self.refresh_token,
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=HTTP_TIMEOUT,
         )
         resp.raise_for_status()
         data = resp.json()
@@ -75,7 +79,19 @@ class ClioAPIClient:
         }
 
         for attempt in range(self.MAX_RETRIES):
-            resp = requests.request(method, url, params=params, headers=headers)
+            try:
+                resp = requests.request(
+                    method,
+                    url,
+                    params=params,
+                    headers=headers,
+                    timeout=HTTP_TIMEOUT,
+                )
+            except (requests.ConnectionError, requests.Timeout):
+                if attempt < self.MAX_RETRIES - 1:
+                    time.sleep(self.RETRY_DELAY)
+                    continue
+                raise
             if resp.status_code == 429 and attempt < self.MAX_RETRIES - 1:
                 retry_after = int(resp.headers.get("Retry-After", self.RETRY_DELAY))
                 time.sleep(retry_after)

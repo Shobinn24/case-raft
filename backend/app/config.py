@@ -1,8 +1,19 @@
 import os
 
 
+_env = os.environ.get("FLASK_ENV", "production")
+_secret_key = os.environ.get("SECRET_KEY")
+if not _secret_key:
+    if _env == "development":
+        _secret_key = "dev-secret-change-me"
+    else:
+        raise RuntimeError(
+            "SECRET_KEY environment variable is required in production"
+        )
+
+
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+    SECRET_KEY = _secret_key
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///caseraft.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
