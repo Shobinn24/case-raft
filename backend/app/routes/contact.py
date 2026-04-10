@@ -17,13 +17,20 @@ def submit_contact():
     if not data:
         return jsonify({"error": "Request body is required"}), 400
 
-    name = (data.get("name") or "").strip()
-    email = (data.get("email") or "").strip()
-    firm_name = (data.get("firm_name") or "").strip()
+    name = (data.get("name") or "").strip()[:255]
+    email = (data.get("email") or "").strip()[:255]
+    firm_name = (data.get("firm_name") or "").strip()[:255]
     message = (data.get("message") or "").strip()
 
     if not name or not email or not message:
         return jsonify({"error": "Name, email, and message are required"}), 400
+
+    if len(message) > 10000:
+        return jsonify({"error": "Message too long (max 10,000 characters)"}), 400
+
+    # Basic email format check — not comprehensive, just a sanity filter
+    if "@" not in email or "." not in email.split("@")[-1]:
+        return jsonify({"error": "Invalid email format"}), 400
 
     # Store in database
     msg = ContactMessage(

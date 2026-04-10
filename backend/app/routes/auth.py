@@ -146,6 +146,10 @@ def status():
             "subscription_status": user.subscription_status,
             "is_paid": user.is_paid,
             "is_admin": user.check_is_admin,
+            # Frontend uses this flag instead of hardcoding an email. The
+            # allowed set is intentionally kept in sync with the backend
+            # check in reports.generate_firm_report.
+            "can_view_trust_report": bool(user.email) and user.email.lower() in {"srhoades@trustice.us"},
         },
     })
 

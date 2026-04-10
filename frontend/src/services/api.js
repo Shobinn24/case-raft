@@ -9,6 +9,22 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// If the session has expired, bounce the user back to login instead of
+// letting the request failure bubble up as a generic error. Skip the
+// auth status check itself — that endpoint is expected to 401 when
+// unauthenticated and App.jsx handles that explicitly.
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const url = err.config?.url || "";
+    const onLoginPage = window.location.pathname === "/";
+    if (err.response?.status === 401 && !url.includes("/auth/status") && !onLoginPage) {
+      window.location.href = "/";
+    }
+    return Promise.reject(err);
+  }
+);
+
 // Auth
 export const getAuthStatus = () => api.get("/auth/status");
 export const logout = () => api.post("/auth/logout");

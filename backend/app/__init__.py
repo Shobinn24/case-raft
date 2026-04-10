@@ -16,6 +16,18 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "
 _SENSITIVE_KEYS = {"access_token", "refresh_token", "password", "secret", "token"}
 
 
+def _sanitize_recursive(obj):
+    """Walk a dict/list structure and mask any key matching _SENSITIVE_KEYS."""
+    if isinstance(obj, dict):
+        return {
+            k: "***" if k.lower() in _SENSITIVE_KEYS else _sanitize_recursive(v)
+            for k, v in obj.items()
+        }
+    if isinstance(obj, list):
+        return [_sanitize_recursive(item) for item in obj]
+    return obj
+
+
 def _sanitize_body(data):
     """Remove sensitive fields from request body before logging."""
     if not data:
@@ -24,12 +36,11 @@ def _sanitize_body(data):
         if isinstance(data, bytes):
             data = data.decode("utf-8", errors="replace")
         if isinstance(data, str):
-            data = json.loads(data)
-        if isinstance(data, dict):
-            return json.dumps(
-                {k: "***" if k.lower() in _SENSITIVE_KEYS else v for k, v in data.items()}
-            )
-        return str(data)[:2000]
+            try:
+                data = json.loads(data)
+            except Exception:
+                return str(data)[:2000]
+        return json.dumps(_sanitize_recursive(data))
     except Exception:
         return None
 
