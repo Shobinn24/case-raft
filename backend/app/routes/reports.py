@@ -90,8 +90,10 @@ def generate_report():
     try:
         rc_resp = clio.get_related_contacts(case_id)
         related_contacts = rc_resp.get("data", [])
-    except Exception:
-        pass  # Non-critical — report still works without relationships
+    except Exception as e:
+        current_app.logger.warning(
+            f"Failed to fetch related_contacts for case {case_id}: {e}"
+        )  # Non-critical — report still works without relationships
 
     # Fetch billing data (invoices and time entries)
     bills = []
@@ -99,13 +101,17 @@ def generate_report():
     try:
         bills_resp = clio.get_bills(case_id)
         bills = bills_resp.get("data", [])
-    except Exception:
-        pass
+    except Exception as e:
+        current_app.logger.warning(
+            f"Failed to fetch bills for case {case_id}: {e}"
+        )
     try:
         activities_resp = clio.get_activities(case_id)
         activities = activities_resp.get("data", [])
-    except Exception:
-        pass
+    except Exception as e:
+        current_app.logger.warning(
+            f"Failed to fetch activities for case {case_id}: {e}"
+        )
 
     # Generate report
     report_classes = {
@@ -143,9 +149,9 @@ def generate_batch_reports():
     if not clio:
         return jsonify({"error": "Not authenticated"}), 401
 
-    sub_error = _require_subscription(user)
-    if sub_error:
-        return sub_error
+    tier_error = _require_tier(user, _ANALYTICS_TIERS, "Batch report generation")
+    if tier_error:
+        return tier_error
 
     data = request.get_json()
     case_ids = data.get("case_ids", []) if data else []
@@ -168,21 +174,27 @@ def generate_batch_reports():
             try:
                 rc_resp = clio.get_related_contacts(case_id)
                 related_contacts = rc_resp.get("data", [])
-            except Exception:
-                pass
+            except Exception as e:
+                current_app.logger.warning(
+                    f"[batch] Failed to fetch related_contacts for case {case_id}: {e}"
+                )
 
             bills = []
             activities = []
             try:
                 bills_resp = clio.get_bills(case_id)
                 bills = bills_resp.get("data", [])
-            except Exception:
-                pass
+            except Exception as e:
+                current_app.logger.warning(
+                    f"[batch] Failed to fetch bills for case {case_id}: {e}"
+                )
             try:
                 activities_resp = clio.get_activities(case_id)
                 activities = activities_resp.get("data", [])
-            except Exception:
-                pass
+            except Exception as e:
+                current_app.logger.warning(
+                    f"[batch] Failed to fetch activities for case {case_id}: {e}"
+                )
 
             report = CaseSummaryReport(
                 case_data["data"], user.id,
@@ -216,12 +228,9 @@ def generate_firm_report():
     if not clio:
         return jsonify({"error": "Not authenticated"}), 401
 
-    if not user.is_paid:
-        return jsonify({
-            "error": "Upgrade required",
-            "message": "Firm productivity reports require a paid plan.",
-            "upgrade": True,
-        }), 403
+    sub_error = _require_subscription(user)
+    if sub_error:
+        return sub_error
 
     data = request.get_json()
     if not data:
@@ -229,6 +238,16 @@ def generate_firm_report():
 
     report_type = data.get("report_type", "firm_productivity")
     options = data.get("options", {})
+
+    # Team+ gating for analytics reports
+    if report_type == "firm_productivity":
+        tier_error = _require_tier(user, _ANALYTICS_TIERS, "Firm productivity report")
+        if tier_error:
+            return tier_error
+    elif report_type == "revenue_by_practice_area":
+        tier_error = _require_tier(user, _ANALYTICS_TIERS, "Revenue by practice area report")
+        if tier_error:
+            return tier_error
 
     # Trust Management Report — restricted to whitelisted tester only
     _TRUST_ALLOWED_EMAILS = {"srhoades@trustice.us"}
@@ -274,8 +293,10 @@ def generate_firm_report():
             pa_resp = clio.get_practice_areas()
             for pa in pa_resp.get("data", []):
                 pa_lookup[pa["id"]] = pa.get("name", "Unknown")
-        except Exception:
-            pass  # Report still works — practice areas show as "Uncategorized"
+        except Exception as e:
+            current_app.logger.warning(
+                f"Failed to fetch practice_areas for revenue report: {e}"
+            )  # Report still works — practice areas show as "Uncategorized"
 
         mode = options.get("mode", "collected")
         rev_data = RevenueByPracticeAreaData(
@@ -308,8 +329,10 @@ def generate_firm_report():
             pa_resp = clio.get_practice_areas()
             for pa in pa_resp.get("data", []):
                 pa_lookup[pa["id"]] = pa.get("name", "Unknown")
-        except Exception:
-            pass
+        except Exception as e:
+            current_app.logger.warning(
+                f"Failed to fetch practice_areas for firm productivity report: {e}"
+            )
 
         # Build full firm data model for productivity reports
         firm_data = FirmProductivityData(
@@ -397,12 +420,9 @@ def export_accounting():
     if not clio:
         return jsonify({"error": "Not authenticated"}), 401
 
-    if not user.is_paid:
-        return jsonify({
-            "error": "Upgrade required",
-            "message": "CSV export requires a paid plan.",
-            "upgrade": True,
-        }), 403
+    tier_error = _require_tier(user, _ANALYTICS_TIERS, "Accounting CSV export")
+    if tier_error:
+        return tier_error
 
     data = request.get_json()
     if not data:

@@ -100,6 +100,9 @@ def create_app():
         """Log 4xx and 5xx responses to the error_logs table."""
         if response.status_code < 400:
             return response
+        # Skip if handle_exception already logged this 500 (prevents double-logging)
+        if response.headers.pop("X-Error-Already-Logged", None):
+            return response
         # Skip static file 404s and CORS preflight
         if request.method == "OPTIONS":
             return response
@@ -186,7 +189,11 @@ def create_app():
             db.session.rollback()
 
         app.logger.exception(f"Unhandled exception on {request.path}")
-        return jsonify({"error": "Internal server error"}), 500
+        response = jsonify({"error": "Internal server error"})
+        response.status_code = 500
+        # Flag so the after_request logger skips this (we already logged above)
+        response.headers["X-Error-Already-Logged"] = "1"
+        return response
 
     # Serve React frontend in production
     if os.path.isdir(FRONTEND_DIR):
