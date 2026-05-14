@@ -9,8 +9,11 @@ from app.services.stripe_service import (
     create_portal_session,
     handle_checkout_completed,
     handle_payment_failed,
+    handle_payment_succeeded,
+    handle_subscription_created,
     handle_subscription_deleted,
     handle_subscription_updated,
+    handle_trial_will_end,
 )
 
 billing_bp = Blueprint("billing", __name__)
@@ -166,12 +169,20 @@ def webhook():
     try:
         if event_type == "checkout.session.completed":
             handle_checkout_completed(data)
+        elif event_type == "customer.subscription.created":
+            handle_subscription_created(data)
         elif event_type == "customer.subscription.updated":
             handle_subscription_updated(data)
         elif event_type == "customer.subscription.deleted":
             handle_subscription_deleted(data)
+        elif event_type == "customer.subscription.trial_will_end":
+            handle_trial_will_end(data)
         elif event_type == "invoice.payment_failed":
             handle_payment_failed(data)
+        elif event_type == "invoice.payment_succeeded":
+            handle_payment_succeeded(data)
+        # Unhandled event types fall through silently — Stripe sends many we
+        # don't care about (charge.*, customer.*, payment_intent.*, etc).
 
         # Record the event only after successful processing so a failed
         # handler gets retried by Stripe instead of being silently skipped.
