@@ -354,9 +354,9 @@
   <tbody>
     {% for bill in data.bills %}
     <tr>
-      <td>{{ bill.number or "\u2014" }}</td>
-      <td>{{ bill.issued_at or "\u2014" }}</td>
-      <td>{{ bill.due_at or "\u2014" }}</td>
+      <td>{{ bill.number or "—" }}</td>
+      <td>{{ bill.issued_at or "—" }}</td>
+      <td>{{ bill.due_at or "—" }}</td>
       <td><span class="bill-state bill-{{ bill.state }}">{{ bill.state_display }}</span></td>
       <td class="currency">{{ bill.format_currency(bill.total) }}</td>
       <td class="currency">{{ bill.format_currency(bill.paid) }}</td>
