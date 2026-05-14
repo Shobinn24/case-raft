@@ -64,13 +64,19 @@ class User(db.Model):
 
     @property
     def is_paid(self):
-        if self.is_whitelisted:
+        # Admins + whitelisted users always pass paid gates. Admins so we can
+        # demo / debug / support without a real subscription on staff
+        # accounts; whitelisted entries for partner comps and Sarah Rhoades'
+        # perpetual Trust Management access.
+        if self.check_is_admin or self.is_whitelisted:
             return True
         return self.subscription_status == "active" and self.plan_tier != "free"
 
     @property
     def effective_plan_tier(self):
-        if self.is_whitelisted:
+        # Admins + whitelisted users get firm-tier feature access. See is_paid
+        # docstring above for the rationale.
+        if self.check_is_admin or self.is_whitelisted:
             return "firm"
         return self.plan_tier
 

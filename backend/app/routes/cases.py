@@ -1,13 +1,18 @@
 from flask import Blueprint, jsonify, request
 
-from app.utils.auth import get_clio_client, unauthenticated_response
+from app.utils.auth import (
+    get_clio_client,
+    require_subscription,
+    unauthenticated_response,
+)
 
 cases_bp = Blueprint("cases", __name__)
 
 
 @cases_bp.route("/cases")
+@require_subscription
 def list_cases():
-    """List all open matters from Clio."""
+    """List all open matters from Clio. Paid feature (see decorator)."""
     clio, _ = get_clio_client()
     if not clio:
         return unauthenticated_response()
@@ -17,8 +22,9 @@ def list_cases():
 
 
 @cases_bp.route("/cases/<int:case_id>")
+@require_subscription
 def get_case(case_id):
-    """Get a single matter with full details."""
+    """Get a single matter with full details. Paid feature (see decorator)."""
     clio, _ = get_clio_client()
     if not clio:
         return unauthenticated_response()

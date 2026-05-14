@@ -12,12 +12,37 @@ from app.services.report import (
     CaseSummaryReport, FirmProductivityReport,
     RevenueByPracticeAreaReport, TrustManagementReport,
 )
-from app.utils.auth import get_clio_client as _get_clio_client  # backwards-compat alias
+from app.utils.auth import (
+    get_clio_client as _get_clio_client,  # backwards-compat alias
+    require_subscription,
+    require_tier,
+)
 
 reports_bp = Blueprint("reports", __name__)
 
+# Tiers that include analytics / trust management features
+_ANALYTICS_TIERS = {"team", "firm"}
+
+# INTENTIONAL COMP: Sarah Rhoades has perpetual firm-tier comp on the Trust
+# Management report (see also her email in WHITELISTED_EMAILS, which grants
+# her firm-tier access broadly). This allowlist ALSO scopes the Trust
+# Management report itself to ONLY Sarah — no other paid users (even firm
+# tier) see it. Do not add an `is_paid` check around this — it's intentional.
+# Adjust env var WHITELISTED_EMAILS if Sarah's email ever changes.
+_TRUST_REPORT_ALLOWED_EMAILS = {"srhoades@trustice.us"}
+
+
+# ---------------------------------------------------------------------------
+# Inline helpers (legacy)
+# ---------------------------------------------------------------------------
+# Prefer the @require_subscription / @require_tier decorators in
+# app.utils.auth for new routes. These remain for routes where the gate
+# depends on request-body data (e.g. generate_firm_report which branches on
+# report_type) and can't be expressed as a static decorator.
+
 def _require_subscription(user):
-    """Ensure the user has an active paid subscription."""
+    """Ensure the user has an active paid subscription. Returns a 403 response
+    tuple on failure, else None."""
     if not user.is_paid:
         return jsonify({
             "error": "Subscription required",
@@ -25,10 +50,6 @@ def _require_subscription(user):
             "upgrade": True,
         }), 403
     return None
-
-
-# Tiers that include analytics / trust management features
-_ANALYTICS_TIERS = {"team", "firm"}
 
 
 def _require_tier(user, allowed_tiers, feature_name="This feature"):
@@ -251,10 +272,11 @@ def generate_firm_report():
         if tier_error:
             return tier_error
 
-    # Trust Management Report — restricted to whitelisted tester only
-    _TRUST_ALLOWED_EMAILS = {"srhoades@trustice.us"}
+    # Trust Management Report — restricted to the allowlist defined at module
+    # top (`_TRUST_REPORT_ALLOWED_EMAILS`). See the comment above the constant
+    # for the rationale; do NOT add an `is_paid` check here.
     if report_type == "trust_management":
-        if user.email.lower() not in _TRUST_ALLOWED_EMAILS:
+        if user.email.lower() not in _TRUST_REPORT_ALLOWED_EMAILS:
             return jsonify({"error": "Trust Management Report is not currently available."}), 403
         try:
             matters_data = clio.get_matters_with_trust_data()
