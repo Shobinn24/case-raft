@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getSubscription, createPortal } from "../services/api";
+import { getSubscription, createPortal, createCheckout } from "../services/api";
 import SEO from "../components/SEO";
 
 const TIER_LABELS = { free: "Free", solo: "Solo", team: "Team", firm: "Firm" };
@@ -15,9 +15,13 @@ export default function Billing({ user, onRefreshAuth }) {
   const [sub, setSub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const justSubscribed = searchParams.get("status") === "success";
+  // Tier passed through the OAuth callback after a brand-new signup from
+  // the landing page. When present, auto-launch Stripe checkout so the
+  // customer goes straight to payment instead of seeing an empty app.
+  const autoCheckoutTier = searchParams.get("start_checkout");
 
   useEffect(() => {
     // If they just subscribed, refresh auth state so navbar updates
@@ -28,6 +32,26 @@ export default function Billing({ user, onRefreshAuth }) {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // Auto-start Stripe checkout for freshly signed-up users.
+  useEffect(() => {
+    if (!autoCheckoutTier) return;
+    if (!["solo", "team", "firm"].includes(autoCheckoutTier)) return;
+    // Don't re-charge someone who already has an active plan.
+    if (user?.is_paid) {
+      setSearchParams({}, { replace: true });
+      return;
+    }
+    (async () => {
+      try {
+        const res = await createCheckout(autoCheckoutTier);
+        window.location.href = res.data.checkout_url;
+      } catch (err) {
+        alert(err.response?.data?.error || "Failed to start checkout. Please pick a plan below.");
+        setSearchParams({}, { replace: true });
+      }
+    })();
+  }, [autoCheckoutTier, user?.is_paid, setSearchParams]);
 
   const handleManage = async () => {
     setPortalLoading(true);
@@ -41,6 +65,9 @@ export default function Billing({ user, onRefreshAuth }) {
   };
 
   if (loading) return <div className="loading">Loading billing info...</div>;
+  if (autoCheckoutTier && !user?.is_paid) {
+    return <div className="loading">Redirecting you to secure Stripe checkout...</div>;
+  }
 
   return (
     <div className="billing-page">

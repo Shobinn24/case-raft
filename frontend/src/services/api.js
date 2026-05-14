@@ -28,7 +28,11 @@ api.interceptors.response.use(
 // Auth
 export const getAuthStatus = () => api.get("/auth/status");
 export const logout = () => api.post("/auth/logout");
-export const getLoginUrl = () => `${API_BASE}/auth/login`;
+// Optional `tier` (solo | team | firm) carries the user's plan choice
+// through Clio OAuth so that after login they're routed into Stripe
+// checkout for that tier instead of being stranded on the app.
+export const getLoginUrl = (tier) =>
+  tier ? `${API_BASE}/auth/login?tier=${encodeURIComponent(tier)}` : `${API_BASE}/auth/login`;
 export const getDevLoginUrl = () => `${API_BASE}/auth/dev-login`;
 
 // Cases

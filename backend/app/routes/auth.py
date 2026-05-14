@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timedelta
 
 import requests
-from flask import Blueprint, current_app, redirect, request, session, jsonify
+from flask import Blueprint, Response, current_app, redirect, request, session, jsonify
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from app.extensions import db, limiter
@@ -20,7 +20,63 @@ def _get_serializer():
 @auth_bp.route("/login")
 @limiter.limit("10 per minute")
 def login():
-    """Redirect the user to Clio's OAuth authorization page."""
+    """Redirect the user to Clio's OAuth authorization page.
+
+    Accepts an optional ?tier=solo|team|firm query parameter. The tier is
+    carried through the signed OAuth state token so that after the callback
+    creates the account we can drop the user straight into Stripe checkout
+    for the plan they picked on the landing page — instead of stranding
+    them on a page with no subscription.
+    """
+    client_id = current_app.config.get("CLIO_CLIENT_ID")
+    redirect_uri = current_app.config.get("CLIO_REDIRECT_URI")
+
+    # If Clio OAuth isn't configured, fail loudly with a clear message
+    # instead of blindly redirecting the user to a broken Clio URL that
+    # 404s. A missing or stale CLIO_CLIENT_ID / CLIO_REDIRECT_URI is the
+    # root cause of the "click Connect → 404" report.
+    if not client_id or not redirect_uri:
+        current_app.logger.error(
+            "Clio OAuth misconfigured: CLIO_CLIENT_ID set=%s CLIO_REDIRECT_URI set=%s",
+            bool(client_id),
+            bool(redirect_uri),
+        )
+        # User hits this via a top-level browser redirect, so return
+        # an HTML page rather than raw JSON.
+        html = (
+            "<!doctype html><html><head>"
+            "<meta charset='utf-8'>"
+            "<title>Sign-in temporarily unavailable · Case Raft</title>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            "<style>"
+            "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
+            "background:#f7f7f8;color:#1a1a1a;margin:0;padding:0;"
+            "display:flex;align-items:center;justify-content:center;min-height:100vh}"
+            ".card{max-width:520px;margin:24px;padding:40px 36px;background:#fff;"
+            "border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.06)}"
+            "h1{font-size:22px;margin:0 0 12px}"
+            "p{line-height:1.55;color:#444;margin:0 0 12px}"
+            "a{color:#2b6cb0;text-decoration:none}a:hover{text-decoration:underline}"
+            ".muted{color:#777;font-size:13px;margin-top:20px}"
+            "</style></head><body>"
+            "<div class='card'>"
+            "<h1>Sign-in is temporarily unavailable</h1>"
+            "<p>We're having trouble reaching our Clio integration right now. "
+            "Nothing is wrong with your account — this is on our side.</p>"
+            "<p>Please try again in a few minutes, or email "
+            "<a href='mailto:support@caseraft.com'>support@caseraft.com</a> "
+            "and we'll get you sorted.</p>"
+            "<p><a href='/'>← Back to homepage</a></p>"
+            "<p class='muted'>Error code: CLIO_OAUTH_NOT_CONFIGURED</p>"
+            "</div></body></html>"
+        )
+        return Response(html, status=503, mimetype="text/html")
+
+    # Capture the plan the user picked on the landing page (if any).
+    tier = (request.args.get("tier") or "").lower()
+    if tier not in ("solo", "team", "firm"):
+        tier = None
+
     # Generate a per-user nonce, store in session, and embed in a signed
     # state token. The callback verifies the signature AND that the nonce
     # matches what's in the session — preventing login CSRF / state reuse.
@@ -28,14 +84,17 @@ def login():
     session["oauth_nonce"] = nonce
 
     s = _get_serializer()
-    state = s.dumps({"nonce": nonce})
+    state_payload = {"nonce": nonce}
+    if tier:
+        state_payload["tier"] = tier
+    state = s.dumps(state_payload)
 
     from urllib.parse import urlencode
 
     params = {
         "response_type": "code",
-        "client_id": current_app.config["CLIO_CLIENT_ID"],
-        "redirect_uri": current_app.config["CLIO_REDIRECT_URI"],
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
         "state": state,
     }
     query = urlencode(params)
@@ -59,6 +118,11 @@ def callback():
     received_nonce = state_data.get("nonce") if isinstance(state_data, dict) else None
     if not expected_nonce or not received_nonce or expected_nonce != received_nonce:
         return jsonify({"error": "State nonce mismatch"}), 400
+
+    # Tier the user picked on the landing page, if any.
+    selected_tier = state_data.get("tier") if isinstance(state_data, dict) else None
+    if selected_tier not in ("solo", "team", "firm"):
+        selected_tier = None
 
     # Check for error (user declined)
     error = request.args.get("error")
@@ -122,8 +186,14 @@ def callback():
     session.permanent = True
     session["user_id"] = user.id
 
-    # Redirect back to the same origin so the session cookie is on the right domain
-    return redirect(f"{request.host_url}cases")
+    # Redirect back to the same origin so the session cookie is on the right domain.
+    # If the user came from the landing page and picked a plan, send them to
+    # Billing with a start_checkout flag so the frontend auto-launches Stripe
+    # checkout. Existing paid users always go straight to /cases.
+    base = request.host_url.rstrip("/")
+    if selected_tier and not user.is_paid:
+        return redirect(f"{base}/billing?start_checkout={selected_tier}")
+    return redirect(f"{base}/cases")
 
 
 @auth_bp.route("/status")

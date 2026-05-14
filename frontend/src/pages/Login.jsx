@@ -235,7 +235,7 @@ export default function Login() {
                 <li>Basic firm reports</li>
                 <li>1 user</li>
               </ul>
-              <a href={getLoginUrl()} className="btn btn-primary btn-large">Get Started</a>
+              <a href={getLoginUrl("solo")} className="btn btn-primary btn-large">Get Started</a>
             </div>
             <div className="landing-price-card landing-price-card-featured">
               <div className="landing-price-popular">Most Popular</div>
@@ -250,7 +250,7 @@ export default function Login() {
                 <li>CSV export (QuickBooks / Xero)</li>
                 <li>Up to 5 users</li>
               </ul>
-              <a href={getLoginUrl()} className="btn btn-accent btn-large">Get Started</a>
+              <a href={getLoginUrl("team")} className="btn btn-accent btn-large">Get Started</a>
             </div>
             <div className="landing-price-card">
               <h3>Firm</h3>
@@ -264,7 +264,7 @@ export default function Login() {
                 <li>Priority support</li>
                 <li>Unlimited users</li>
               </ul>
-              <a href={getLoginUrl()} className="btn btn-primary btn-large">Get Started</a>
+              <a href={getLoginUrl("firm")} className="btn btn-primary btn-large">Get Started</a>
             </div>
           </div>
           <p className="landing-pricing-compare"><a href="#compare">Compare all features &rarr;</a></p>
