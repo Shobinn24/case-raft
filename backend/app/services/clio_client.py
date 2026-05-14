@@ -48,8 +48,19 @@ class ClioAPIClient:
         resp.raise_for_status()
         data = resp.json()
 
-        self.access_token = data["access_token"]
-        self.token_expires_at = datetime.utcnow() + timedelta(seconds=data["expires_in"])
+        # Clio's refresh response should always carry access_token + expires_in,
+        # but defend against a malformed response shape (e.g. Clio API outage
+        # returning HTML, partial JSON, or a future schema change) rather than
+        # letting a KeyError bubble up as an opaque 500.
+        access_token = data.get("access_token")
+        expires_in = data.get("expires_in")
+        if not access_token or not isinstance(expires_in, (int, float)):
+            raise RuntimeError(
+                "Clio token refresh returned an unexpected payload "
+                "(missing access_token or expires_in)"
+            )
+        self.access_token = access_token
+        self.token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
 
         # Update tokens in the database
         from app.models.user import User

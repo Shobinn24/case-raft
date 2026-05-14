@@ -47,7 +47,10 @@ class Case:
             if item.get("is_matter_client"):
                 continue
 
-            desc = contact.relationship_description.lower()
+            # `relationship_description` can be None when Clio returns
+            # `relationship: {"description": null}` — guard so one bad
+            # related contact doesn't crash the whole report render.
+            desc = (contact.relationship_description or "").lower()
 
             if any(term in desc for term in ["opposing party", "adverse party",
                                               "defendant", "plaintiff",
@@ -129,9 +132,13 @@ class RelatedContact:
         self.phone = data.get("primary_phone_number", "")
         self.company = (data.get("company") or {}).get("name", "")
 
-        # Relationship info
+        # Relationship info. Clio sometimes returns
+        # `relationship: {"description": null}` — `.get("description", "")`
+        # returns None in that case (the default only kicks in when the
+        # key is absent), so coerce to "" with `or`. Defense in depth: the
+        # consumer in set_related_contacts() also guards.
         rel = data.get("relationship") or {}
-        self.relationship_description = rel.get("description", "")
+        self.relationship_description = rel.get("description") or ""
 
         # Full address (first one if available)
         addresses = data.get("addresses") or []
