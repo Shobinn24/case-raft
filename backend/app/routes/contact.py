@@ -3,6 +3,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from app.extensions import db, limiter
 from app.models.contact_message import ContactMessage
+from app.services.alerts import alert_support
 
 contact_bp = Blueprint("contact", __name__)
 
@@ -12,7 +13,8 @@ FORMSPREE_URL = "https://formspree.io/f/xkoqrpjn"
 @contact_bp.route("/contact", methods=["POST"])
 @limiter.limit("5 per minute")
 def submit_contact():
-    """Handle contact form submissions — store in DB and forward to Formspree."""
+    """Handle contact form submissions — store in DB, forward to Formspree,
+    AND ping Slack so Shobinn sees it before checking email."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Request body is required"}), 400
@@ -43,6 +45,7 @@ def submit_contact():
     db.session.commit()
 
     # Forward to Formspree for email notification
+    formspree_ok = True
     try:
         http_requests.post(FORMSPREE_URL, json={
             "name": name,
@@ -52,7 +55,31 @@ def submit_contact():
             "message": message,
             "_subject": f"CaseRaft Contact: {name}" + (f" ({firm_name})" if firm_name else ""),
         }, timeout=10)
-    except Exception:
-        pass  # Don't fail the request if Formspree fails — message is saved in DB
+    except Exception as e:
+        # Don't fail the request if Formspree fails — message is saved in DB
+        # AND we'll still fire the Slack alert below as backup.
+        formspree_ok = False
+        current_app.logger.warning(
+            "contact form: Formspree forward failed for msg id=%s: %s",
+            msg.id, e,
+        )
+
+    # Slack ping — primary signal so support inbound doesn't get lost in
+    # email. Fires regardless of Formspree outcome.
+    fields = [
+        ("Name", name),
+        ("Email", email),
+    ]
+    if firm_name:
+        fields.append(("Firm", firm_name))
+    fields.append(("Message ID", str(msg.id)))
+    if not formspree_ok:
+        fields.append(("⚠️ Formspree", "forward failed — email backup did NOT send"))
+
+    alert_support(
+        title=f"Support inbound from {name}",
+        body=message[:1500],
+        fields=fields,
+    )
 
     return jsonify({"message": "Thank you! We'll be in touch soon."}), 201
