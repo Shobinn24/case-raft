@@ -45,7 +45,45 @@ def _sanitize_body(data):
         return None
 
 
+def _init_sentry():
+    """Initialize Sentry error tracking if SENTRY_DSN is configured.
+
+    Idempotent — Sentry SDK guards against double-init internally, but
+    we also gate on the env var so dev/test/un-configured environments
+    silently skip. Failure to import sentry_sdk (e.g. it's not in the
+    install) is also non-fatal.
+    """
+    dsn = os.environ.get("SENTRY_DSN")
+    if not dsn:
+        return
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
+        sentry_sdk.init(
+            dsn=dsn,
+            integrations=[FlaskIntegration(), SqlalchemyIntegration()],
+            # Performance monitoring at a low sample rate to keep the free
+            # tier within budget. Bump to 1.0 temporarily to debug a
+            # specific perf regression.
+            traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.05")),
+            environment=os.environ.get("FLASK_ENV", "production"),
+            release=os.environ.get("RAILWAY_GIT_COMMIT_SHA"),
+            send_default_pii=False,
+        )
+    except ImportError:
+        # sentry_sdk not installed — silently skip rather than crashing the
+        # whole app. The error-tracking workstream is non-essential to the
+        # request path.
+        pass
+
+
 def create_app():
+    # Sentry needs to be initialized BEFORE Flask + extensions so its
+    # integrations can hook into the right layers.
+    _init_sentry()
+
     app = Flask(__name__)
     app.config.from_object(Config)
 
@@ -213,10 +251,85 @@ def create_app():
         response.headers["X-Error-Already-Logged"] = "1"
         return response
 
-    # Health check endpoint for Railway / uptime monitoring
+    # Health check endpoint for Railway / uptime monitoring.
+    # `/health` is the cheap liveness check (Railway uses it to decide if the
+    # container is alive — returns 200 as long as Flask itself is running).
+    # `/api/health` is the deeper readiness check (DB connectivity + freshness
+    # signals). Healthchecks.io dead-man polls /api/health every 10 minutes
+    # and alerts to Slack on miss or non-2xx.
     @app.route("/health")
     def health_check():
         return {"status": "ok", "service": "caseraft"}, 200
+
+    @app.route("/api/health")
+    def api_health():
+        from datetime import datetime, timedelta, timezone
+        from sqlalchemy import text
+
+        from app.models.stripe_webhook_event import StripeWebhookEvent
+
+        checks = []
+        overall_ok = True
+
+        # 1) DB connectivity — cheap roundtrip.
+        try:
+            db.session.execute(text("SELECT 1"))
+            checks.append({"name": "db", "status": "pass"})
+        except Exception as e:
+            checks.append({
+                "name": "db",
+                "status": "fail",
+                "detail": f"{type(e).__name__}: {str(e)[:120]}",
+            })
+            overall_ok = False
+
+        # 2) Most recent Stripe webhook timestamp — informational. A long
+        # gap (no webhooks for 7+ days) can indicate a misconfigured
+        # webhook URL on the Stripe side, but isn't an automatic fail
+        # because a dev/staging env may legitimately have no traffic.
+        try:
+            latest = (
+                db.session.query(StripeWebhookEvent)
+                .order_by(StripeWebhookEvent.processed_at.desc())
+                .first()
+            )
+            if latest is None:
+                checks.append({
+                    "name": "stripe_webhooks",
+                    "status": "pass",
+                    "detail": "no events yet (pre-launch / dev env)",
+                })
+            else:
+                processed = latest.processed_at
+                if processed.tzinfo is None:
+                    processed = processed.replace(tzinfo=timezone.utc)
+                age_days = (
+                    datetime.now(timezone.utc) - processed
+                ).total_seconds() / 86400
+                check = {
+                    "name": "stripe_webhooks",
+                    "status": "pass",
+                    "lastEventAt": processed.isoformat(),
+                    "ageDays": round(age_days, 2),
+                }
+                if age_days > 7:
+                    # Soft warning — informational, doesn't flip overall.
+                    check["warning"] = "no Stripe webhook events in 7+ days"
+                checks.append(check)
+        except Exception as e:
+            checks.append({
+                "name": "stripe_webhooks",
+                "status": "fail",
+                "detail": f"{type(e).__name__}: {str(e)[:120]}",
+            })
+            overall_ok = False
+
+        return jsonify({
+            "ok": overall_ok,
+            "service": "caseraft",
+            "checks": checks,
+            "asOf": datetime.now(timezone.utc).isoformat(),
+        }), (200 if overall_ok else 503)
 
     # Serve React frontend in production
     if os.path.isdir(FRONTEND_DIR):
