@@ -151,9 +151,20 @@ def callback():
         return jsonify({"error": "Failed to exchange code for token", "details": token_resp.text}), 400
 
     token_data = token_resp.json()
-    access_token = token_data["access_token"]
-    refresh_token = token_data["refresh_token"]
-    expires_at = datetime.utcnow() + timedelta(seconds=token_data["expires_in"])
+    # Defend against a malformed Clio response (200 OK + partial JSON,
+    # HTML during a Clio outage, future schema drift). Matches the same
+    # guard the refresh path uses in clio_client.py — keeps a bad payload
+    # from raising an opaque 500 instead of the proper 400 paths above.
+    access_token = token_data.get("access_token")
+    refresh_token = token_data.get("refresh_token")
+    expires_in = token_data.get("expires_in")
+    if not access_token or not refresh_token or not isinstance(expires_in, (int, float)):
+        current_app.logger.error(
+            "Clio OAuth callback: malformed token response. Keys=%s",
+            list(token_data.keys()) if isinstance(token_data, dict) else type(token_data).__name__,
+        )
+        return jsonify({"error": "Clio returned an invalid token response. Please try again."}), 400
+    expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
 
     # Get user info from Clio Manage
     clio = ClioAPIClient(access_token, refresh_token, expires_at, user_id=None)
