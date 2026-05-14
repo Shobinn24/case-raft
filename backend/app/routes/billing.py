@@ -4,6 +4,7 @@ from flask import Blueprint, current_app, jsonify, request, session
 from app.extensions import db
 from app.models.stripe_webhook_event import StripeWebhookEvent
 from app.models.user import User
+from app.services.alerts import alert_p1
 from app.services.stripe_service import (
     create_checkout_session,
     create_portal_session,
@@ -188,8 +189,24 @@ def webhook():
         # handler gets retried by Stripe instead of being silently skipped.
         db.session.add(StripeWebhookEvent(id=event_id, event_type=event_type))
         db.session.commit()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        # Fire P1 alert BEFORE re-raise so we see every handler failure
+        # even though Stripe will retry. Idempotent retries that succeed
+        # don't re-alert (handled event short-circuits at line 166).
+        alert_p1(
+            title=f"Stripe webhook handler failed: {event_type}",
+            body=(
+                "Webhook processing raised. Stripe will retry; investigate "
+                "before retry exhaustion or the customer will end up in an "
+                "inconsistent state."
+            ),
+            fields=[
+                ("Event type", event_type),
+                ("Event ID", event_id),
+                ("Error", f"`{type(e).__name__}: {e}`"),
+            ],
+        )
         raise
 
     return jsonify({"status": "ok"}), 200

@@ -34,19 +34,40 @@ class ClioAPIClient:
 
     def _refresh_token(self):
         """Exchange refresh token for a new access token."""
-        resp = requests.post(
-            current_app.config["CLIO_TOKEN_URL"],
-            data={
-                "client_id": current_app.config["CLIO_CLIENT_ID"],
-                "client_secret": current_app.config["CLIO_CLIENT_SECRET"],
-                "grant_type": "refresh_token",
-                "refresh_token": self.refresh_token,
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=HTTP_TIMEOUT,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+        from app.services.alerts import alert_p1
+
+        try:
+            resp = requests.post(
+                current_app.config["CLIO_TOKEN_URL"],
+                data={
+                    "client_id": current_app.config["CLIO_CLIENT_ID"],
+                    "client_secret": current_app.config["CLIO_CLIENT_SECRET"],
+                    "grant_type": "refresh_token",
+                    "refresh_token": self.refresh_token,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=HTTP_TIMEOUT,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            # Token refresh failures are user-visible (every Clio API call
+            # by this user will start failing). Fire a P1 so we see it
+            # before the user emails support.
+            alert_p1(
+                title="Clio OAuth token refresh failed",
+                body=(
+                    "A user's Clio refresh-token exchange failed. They'll be "
+                    "logged out of Clio integrations until this is resolved. "
+                    "If this fires repeatedly for the same user, their refresh "
+                    "token was likely revoked on Clio's side."
+                ),
+                fields=[
+                    ("User ID", str(self.user_id) if self.user_id else "unknown"),
+                    ("Error", f"`{type(e).__name__}: {e}`"),
+                ],
+            )
+            raise
 
         # Clio's refresh response should always carry access_token + expires_in,
         # but defend against a malformed response shape (e.g. Clio API outage
@@ -55,6 +76,18 @@ class ClioAPIClient:
         access_token = data.get("access_token")
         expires_in = data.get("expires_in")
         if not access_token or not isinstance(expires_in, (int, float)):
+            alert_p1(
+                title="Clio OAuth token refresh: malformed response",
+                body=(
+                    "Clio returned a 200 OK but the payload didn't have "
+                    "access_token + expires_in. Schema drift or partial "
+                    "outage. Check Clio status page."
+                ),
+                fields=[
+                    ("User ID", str(self.user_id) if self.user_id else "unknown"),
+                    ("Payload keys", str(list(data.keys()))),
+                ],
+            )
             raise RuntimeError(
                 "Clio token refresh returned an unexpected payload "
                 "(missing access_token or expires_in)"
