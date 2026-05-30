@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate, NavLink, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, NavLink, Link, useNavigate } from "react-router-dom";
 import { getAuthStatus, logout } from "./services/api";
 import Login from "./pages/Login";
 import Cases from "./pages/Cases";
@@ -20,6 +20,7 @@ import logo from "./assets/caseraftlogo.jpg";
 
 function App() {
   const [auth, setAuth] = useState({ checked: false, user: null });
+  const navigate = useNavigate();
 
   const refreshAuth = () => {
     getAuthStatus()
@@ -34,6 +35,10 @@ function App() {
   const handleLogout = async () => {
     await logout();
     setAuth({ checked: true, user: null });
+    // Redirect to the login page. Without this the URL stays on an
+    // authenticated path (e.g. /cases), which has no match in the
+    // logged-out route set and falls through to the catch-all 404.
+    navigate("/");
   };
 
   if (!auth.checked) {
