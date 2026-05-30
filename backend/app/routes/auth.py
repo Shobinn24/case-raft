@@ -8,6 +8,7 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from app.extensions import db, limiter
 from app.models.user import User
+from app.services.audit import record_audit
 from app.services.clio_client import ClioAPIClient, HTTP_TIMEOUT
 
 auth_bp = Blueprint("auth", __name__)
@@ -197,6 +198,8 @@ def callback():
     session.permanent = True
     session["user_id"] = user.id
 
+    record_audit("login", user=user)
+
     # Redirect back to the same origin so the session cookie is on the right domain.
     # If the user came from the landing page and picked a plan, send them to
     # Billing with a start_checkout flag so the frontend auto-launches Stripe
@@ -290,5 +293,8 @@ def dev_login():
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     """Clear the session."""
+    user_id = session.get("user_id")
+    if user_id:
+        record_audit("logout", user=User.query.get(user_id))
     session.clear()
     return jsonify({"message": "Logged out"})

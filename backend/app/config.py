@@ -25,6 +25,10 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     SESSION_REFRESH_EACH_REQUEST = True
 
+    # Token-at-rest encryption (Fernet). When unset, Clio tokens are stored
+    # as plaintext (legacy behavior) — see app/utils/crypto.py.
+    TOKEN_ENCRYPTION_KEY = os.environ.get("TOKEN_ENCRYPTION_KEY")
+
     # Clio OAuth
     CLIO_CLIENT_ID = os.environ.get("CLIO_CLIENT_ID")
     CLIO_CLIENT_SECRET = os.environ.get("CLIO_CLIENT_SECRET")

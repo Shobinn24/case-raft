@@ -7,6 +7,8 @@ from flask import Blueprint, Response, jsonify, request, send_file, session, cur
 
 from app.extensions import limiter
 from app.models.report_history import ReportHistory
+from app.models.user import User
+from app.services.audit import record_audit
 from app.services.firm_data import FirmProductivityData, RevenueByPracticeAreaData, TrustManagementData
 from app.services.report import (
     CaseSummaryReport, FirmProductivityReport,
@@ -287,6 +289,9 @@ def generate_firm_report():
         report = TrustManagementReport(trust_data, user.id, options=options, user_tz=user.timezone)
         record = report.generate()
 
+        record_audit("report.generate", user=user, resource_type="report",
+                     resource_id=record.id, detail="trust_management")
+
         return jsonify({
             "message": "Report generated successfully",
             "report": {
@@ -429,6 +434,10 @@ def download_report(report_id):
 
     if not os.path.exists(file_path):
         return jsonify({"error": "Report file not found on disk"}), 404
+
+    record_audit("report.download", user=User.query.get(user_id),
+                 resource_type="report", resource_id=report_id,
+                 detail=record.report_type)
 
     return send_file(
         file_path,
