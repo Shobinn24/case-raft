@@ -75,17 +75,17 @@ export default function Login() {
       {/* ── Hero ── */}
       <section className="hero">
         <div className="hero-inner">
-          <div className="hero-badge">Built for Clio Manage</div>
+          <div className="hero-badge">Available in the Clio App Directory</div>
           <h1>From Clio Data to Court-Ready Reports in 60 Seconds.</h1>
           <p className="hero-sub">
-            Stop manually compiling matter summaries. Case Raft connects to your
-            Clio Manage account to generate comprehensive, professional PDF
-            reports instantly.
+            Browse your matters, click generate, and download a clean PDF.
+            Case summaries, billing, and time entries — pulled straight from
+            Clio Manage, with no copy-paste and no reformatting.
           </p>
           <a href="#pricing" className="btn btn-accent btn-large">
-            View Plans &amp; Pricing
+            Get Started — 50% Off Your First Month
           </a>
-          <p className="hero-note">Powered by Clio Manage · OAuth 2.0 secure</p>
+          <p className="hero-note">Integrates with Clio Manage · Read-only OAuth 2.0</p>
         </div>
       </section>
 
@@ -371,6 +371,11 @@ export default function Login() {
           </div>
           <div className="footer-bottom">
             <p>&copy; {new Date().getFullYear()} Case Raft. All rights reserved.</p>
+            <p className="footer-disclaimer">
+              Case Raft integrates with Clio Manage through the official Clio API.
+              Clio is a trademark of Themis Solutions Inc. Case Raft is an independent
+              product and is not affiliated with, endorsed by, or sponsored by Clio.
+            </p>
             <div className="footer-bottom-links">
               <Link to="/privacy-policy">Privacy Policy</Link>
               <span className="footer-divider">|</span>

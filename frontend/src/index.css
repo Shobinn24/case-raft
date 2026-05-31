@@ -442,12 +442,22 @@ a { text-decoration: none; color: inherit; }
   border-top: 1px solid rgba(255,255,255,0.1);
   padding-top: 24px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
 }
 .footer-bottom p {
   font-size: 0.82rem;
   color: rgba(255,255,255,0.4);
+}
+.footer-bottom .footer-disclaimer {
+  flex-basis: 100%;
+  order: 3;
+  margin-top: 14px;
+  max-width: 720px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.3);
 }
 .footer-tagline {
   font-style: italic;
