@@ -10,6 +10,10 @@ export default defineConfig({
       '/api': 'http://localhost:5000',
       '/billing': 'http://localhost:5000',
       '/admin': 'http://localhost:5000',
+      // Only the JSON/consent endpoints: bare /connect stays a React route
+      '/connect/status': 'http://localhost:5000',
+      '/connect/revoke': 'http://localhost:5000',
+      '/connect/authorize': 'http://localhost:5000',
     },
   },
 })

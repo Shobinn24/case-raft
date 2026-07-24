@@ -1,9 +1,116 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { getSubscription, createPortal, createCheckout } from "../services/api";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  getSubscription,
+  createPortal,
+  createCheckout,
+  getConnectStatus,
+  revokeConnect,
+} from "../services/api";
 import SEO from "../components/SEO";
 
 const TIER_LABELS = { free: "Free", solo: "Solo", team: "Team", firm: "Firm" };
+
+function formatLastUsed(iso) {
+  if (!iso) return "Never";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Never";
+  return date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function ClaudeConnectorCard() {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [revoking, setRevoking] = useState(false);
+  const [error, setError] = useState(null);
+
+  const refresh = () =>
+    getConnectStatus()
+      .then((res) => {
+        setStatus(res.data);
+        setError(null);
+      })
+      .catch(() => setError("Could not load connector status."))
+      .finally(() => setLoading(false));
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const handleRevoke = async () => {
+    const sure = window.confirm(
+      "Disconnect Claude from your Clio data? Claude will immediately lose " +
+        "access. You can reconnect anytime from the setup page."
+    );
+    if (!sure) return;
+    setRevoking(true);
+    try {
+      await revokeConnect();
+      await refresh();
+    } catch {
+      setError("Could not revoke access. Please try again.");
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  const connected = status?.connected;
+
+  return (
+    <>
+      <h2 className="connector-heading">Claude Connector</h2>
+      <div className="billing-card connector-card">
+        <div className="billing-row">
+          <span className="billing-label">Status</span>
+          <span
+            className={
+              "billing-value " +
+              (connected ? "connector-status-on" : "connector-status-off")
+            }
+          >
+            {loading ? "Checking..." : connected ? "Connected" : "Not connected"}
+          </span>
+        </div>
+        <div className="billing-row">
+          <span className="billing-label">Last used</span>
+          <span className="billing-value">
+            {loading ? "..." : connected ? formatLastUsed(status?.last_used_at) : "n/a"}
+          </span>
+        </div>
+        {error && <p className="connector-error">{error}</p>}
+        <div className="connector-actions">
+          {connected ? (
+            <button
+              className="btn btn-small btn-revoke"
+              onClick={handleRevoke}
+              disabled={revoking}
+            >
+              {revoking ? "Revoking..." : "Revoke access"}
+            </button>
+          ) : (
+            !loading && (
+              <Link to="/connect" className="btn btn-small btn-accent">
+                Set up the connector
+              </Link>
+            )
+          )}
+          <Link to="/security" className="connector-security-link">
+            How your data is protected
+          </Link>
+        </div>
+        <p className="connector-note">
+          The connector gives Claude read-only access to your Clio data
+          through CaseRaft. Every access is logged. Revoking disconnects
+          Claude immediately; your CaseRaft account and reports are not
+          affected.
+        </p>
+      </div>
+    </>
+  );
+}
 const STATUS_LABELS = {
   free: "No active subscription",
   active: "Active",
@@ -113,6 +220,8 @@ export default function Billing({ user, onRefreshAuth }) {
           </button>
         )}
       </div>
+
+      {sub?.is_paid && <ClaudeConnectorCard />}
 
       {sub?.subscription_status === "past_due" && (
         <div className="billing-warning">

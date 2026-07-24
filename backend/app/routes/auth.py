@@ -205,6 +205,10 @@ def callback():
     # Billing with a start_checkout flag so the frontend auto-launches Stripe
     # checkout. Existing paid users always go straight to /cases.
     base = request.host_url.rstrip("/")
+    # A pending Claude-connector consent (stashed by /connect/authorize when
+    # the user arrived signed out) takes priority: finish that flow first.
+    if session.get("mcp_authorize_params"):
+        return redirect(f"{base}/connect/authorize?resume=1")
     if selected_tier and not user.is_paid:
         return redirect(f"{base}/billing?start_checkout={selected_tier}")
     return redirect(f"{base}/cases")

@@ -126,6 +126,7 @@ def create_app():
     from app.routes.billing import billing_bp
     from app.routes.contact import contact_bp
     from app.routes.admin import admin_bp
+    from app.routes.connect import connect_bp
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(cases_bp, url_prefix="/api")
@@ -133,6 +134,7 @@ def create_app():
     app.register_blueprint(billing_bp, url_prefix="/billing")
     app.register_blueprint(contact_bp, url_prefix="/api")
     app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(connect_bp, url_prefix="/connect")
 
     # ---- Security headers ----
     @app.after_request

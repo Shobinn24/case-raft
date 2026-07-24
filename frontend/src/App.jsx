@@ -15,6 +15,8 @@ import TrustReport from "./pages/TrustReport";
 import Admin from "./pages/Admin";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import Connect from "./pages/Connect";
+import Security from "./pages/Security";
 import NotFound from "./pages/NotFound";
 import logo from "./assets/caseraftlogo.jpg";
 
@@ -49,6 +51,8 @@ function App() {
     return (
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/connect" element={<Connect standalone />} />
+        <Route path="/security" element={<Security />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="/pricing" element={<Login />} />
@@ -104,6 +108,8 @@ function App() {
               <Route path="/compare" element={<ComparePlans user={auth.user} />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/billing" element={<Billing user={auth.user} onRefreshAuth={refreshAuth} />} />
+              <Route path="/connect" element={<Connect />} />
+              <Route path="/security" element={<Security />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="*" element={<Navigate to="/pricing" replace />} />
@@ -128,6 +134,8 @@ function App() {
               <Route path="/compare" element={<ComparePlans user={auth.user} />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/billing" element={<Billing user={auth.user} onRefreshAuth={refreshAuth} />} />
+              <Route path="/connect" element={<Connect />} />
+              <Route path="/security" element={<Security />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />
               {auth.user.is_admin && (

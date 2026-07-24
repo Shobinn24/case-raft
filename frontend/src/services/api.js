@@ -75,6 +75,10 @@ export const getSubscription = () => api.get("/billing/subscription");
 export const createCheckout = (tier) => api.post("/billing/checkout", { tier });
 export const createPortal = () => api.post("/billing/portal");
 
+// Claude Connector (CaseRaft for Claude)
+export const getConnectStatus = () => api.get("/connect/status");
+export const revokeConnect = () => api.post("/connect/revoke");
+
 // Contact
 export const submitContact = (data) => api.post("/api/contact", data);
 
