@@ -171,18 +171,22 @@ def get_token_row(access_token):
 # ---------------------------------------------------------------------------
 
 class FakeClioResponse:
-    status_code = 200
-    ok = True
-    reason = "OK"
     headers = {}
     url = ""
     text = ""
 
-    def __init__(self, payload):
+    def __init__(self, payload, status=200):
         self._payload = payload
+        self.status_code = status
+        self.ok = status < 400
+        self.reason = "OK" if status < 400 else "Forbidden" if status == 403 else "Error"
 
     def json(self):
         return self._payload
+
+
+class _ForbiddenMarker:
+    pass
 
 
 class ClioMock:
@@ -196,6 +200,10 @@ class ClioMock:
         """payload: dict, or callable(params) -> dict."""
         self.routes[endpoint_suffix] = payload
 
+    def set_forbidden(self, endpoint_suffix):
+        """Simulate Clio's 403 ForbiddenError (missing app scope)."""
+        self.routes[endpoint_suffix] = _ForbiddenMarker()
+
     def calls_to(self, endpoint_suffix):
         return [c for c in self.calls if endpoint_suffix in c[1]]
 
@@ -203,6 +211,12 @@ class ClioMock:
         self.calls.append((method, url, dict(params or {})))
         for suffix, payload in self.routes.items():
             if suffix in url:
+                if isinstance(payload, _ForbiddenMarker):
+                    return FakeClioResponse(
+                        {"error": {"type": "ForbiddenError",
+                                   "message": "User is forbidden from taking that action"}},
+                        status=403,
+                    )
                 data = payload(params or {}) if callable(payload) else payload
                 return FakeClioResponse(data)
         return FakeClioResponse({"data": []})

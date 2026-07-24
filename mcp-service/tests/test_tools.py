@@ -294,6 +294,46 @@ def test_daily_digest_unknown_timezone_falls_back_to_utc(mcp_session, clio):
     assert result["timezone"] == "UTC"
 
 
+def test_daily_digest_degrades_when_tasks_and_calendar_forbidden(mcp_session, clio):
+    # Clio 403s (missing app scopes) must degrade those sections, not the
+    # whole digest: bills and the summary still ship, with notes.
+    clio.set_forbidden("tasks.json")
+    clio.set_forbidden("calendar_entries.json")
+    clio.set("bills.json", {"data": [
+        {"id": 1, "number": "INV-1", "issued_at": "2026-07-01",
+         "due_at": "2026-07-15", "state": "awaiting_payment", "balance": 500.0},
+    ]})
+    session = mcp_session(email="scoped@example.com", timezone="Eastern Time (US & Canada)")
+    result = session.call_tool("daily_digest", {"date": "2026-07-24"})
+    assert result["tasks_available"] is False
+    assert result["calendar_available"] is False
+    assert result["tasks"] == [] and result["calendar_entries"] == []
+    assert "permission" in result["tasks_note"]
+    assert "permission" in result["calendar_note"]
+    assert result["summary"]["tasks_open"] is None
+    assert result["summary"]["calendar_entries"] is None
+    assert result["summary"]["unpaid_bills"] == 1
+    assert result["summary"]["outstanding_balance"] == 500.0
+    assert result["unpaid_bills"][0]["number"] == "INV-1"
+
+
+def test_daily_digest_partial_forbidden_only_hits_that_section(mcp_session, clio):
+    clio.set_forbidden("tasks.json")
+    clio.set("calendar_entries.json", {"data": [
+        {"id": 9, "summary": "Hearing", "start_at": "2026-07-24T14:00:00Z",
+         "end_at": "2026-07-24T15:00:00Z", "all_day": False,
+         "location": "Court", "matter": {"display_number": "2026-001"}},
+    ]})
+    clio.set("bills.json", {"data": []})
+    session = mcp_session(email="partial@example.com", timezone="Eastern Time (US & Canada)")
+    result = session.call_tool("daily_digest", {"date": "2026-07-24"})
+    assert result["tasks_available"] is False
+    assert result["calendar_available"] is True
+    assert result["summary"]["calendar_entries"] == 1
+    assert result["calendar_entries"][0]["summary"] == "Hearing"
+    assert "calendar_note" not in result
+
+
 # ---------------------------------------------------------------------------
 # audit logging
 # ---------------------------------------------------------------------------

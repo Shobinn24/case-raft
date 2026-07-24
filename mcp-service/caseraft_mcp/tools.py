@@ -15,6 +15,8 @@ below the ~150k char tool-result budget from the build plan.
 
 import logging
 from datetime import date as date_cls, datetime, timedelta, timezone
+
+import requests
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
@@ -479,11 +481,30 @@ def register_tools(mcp):
                                  tzinfo=tzinfo)
             day_end = day_start + timedelta(days=1)
 
+            # Tasks and calendar require scopes the Clio app registration may
+            # not have yet; a 403 there degrades that SECTION, never the whole
+            # digest (bills and the summary still ship).
+            def _is_forbidden(exc):
+                resp = getattr(exc, "response", None)
+                return resp is not None and resp.status_code == 403
+
+            unavailable_note = (
+                "Not available yet: the CaseRaft app is awaiting Clio "
+                "permission for this data."
+            )
+
             # Open tasks due on or before the target date (catches overdue)
-            tasks_resp = user.clio.list_tasks(
-                due_before=target_str, complete=False)
             task_rows = []
             overdue_count = 0
+            tasks_available = True
+            try:
+                tasks_resp = user.clio.list_tasks(
+                    due_before=target_str, complete=False)
+            except requests.HTTPError as exc:
+                if not _is_forbidden(exc):
+                    raise
+                tasks_available = False
+                tasks_resp = None
             for t in (tasks_resp or {}).get("data", []):
                 due_at = t.get("due_at")
                 overdue = bool(due_at and due_at[:10] < target_str)
@@ -502,8 +523,15 @@ def register_tools(mcp):
             total_open_tasks = len(task_rows)
             task_rows, tasks_truncated = _cap_list(task_rows, DIGEST_CAP)
 
-            events_resp = user.clio.list_calendar_entries(
-                day_start.isoformat(), day_end.isoformat())
+            calendar_available = True
+            try:
+                events_resp = user.clio.list_calendar_entries(
+                    day_start.isoformat(), day_end.isoformat())
+            except requests.HTTPError as exc:
+                if not _is_forbidden(exc):
+                    raise
+                calendar_available = False
+                events_resp = None
             event_rows = [
                 {
                     "id": e.get("id"),
@@ -541,23 +569,30 @@ def register_tools(mcp):
             bill_rows, bills_truncated = _cap_list(bill_rows, DIGEST_CAP)
             outstanding_total = sum(b.get("balance") or 0 for b in unpaid)
 
-            return {
+            result = {
                 "date": target_str,
                 "timezone": str(tzinfo),
                 "summary": {
-                    "tasks_open": total_open_tasks,
-                    "tasks_overdue": overdue_count,
-                    "calendar_entries": total_events,
+                    "tasks_open": total_open_tasks if tasks_available else None,
+                    "tasks_overdue": overdue_count if tasks_available else None,
+                    "calendar_entries": total_events if calendar_available else None,
                     "unpaid_bills": len(unpaid),
                     "outstanding_balance": _round(outstanding_total, 2),
                 },
                 "tasks": task_rows,
+                "tasks_available": tasks_available,
                 "tasks_truncated": tasks_truncated,
                 "calendar_entries": event_rows,
+                "calendar_available": calendar_available,
                 "calendar_truncated": events_truncated,
                 "unpaid_bills": bill_rows,
                 "bills_truncated": bills_truncated,
             }
+            if not tasks_available:
+                result["tasks_note"] = unavailable_note
+            if not calendar_available:
+                result["calendar_note"] = unavailable_note
+            return result
 
         return _run("daily_digest", {"date": date or "today"}, impl)
 
